@@ -436,7 +436,7 @@ class ChaosMapEnv(gym.Env):
         for cm in corner_metrics:
             if cm.get('ALE', 0.0) < tau_ale or cm.get('chaotic_ratio', 0.0) < tau_cr:
                 return False
-        print(f"[ChaosMapEnv] SUCCESS — all_pass=True at step {self.episode_step}, terminal bonus applied")
+        print(f"[ChaosMapEnv] SUCCESS - all_pass=True at step {self.episode_step}, terminal bonus applied")
         return True
 
 

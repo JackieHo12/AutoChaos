@@ -194,7 +194,7 @@ def run_training(env_config, train_cfg, args):
                 best_reward = reward
                 best_path = os.path.join(CHECKPOINT_DIR, "best")
                 algo.save_to_path(best_path)
-                print(f"[train.py] New best reward={reward:.3f} — checkpoint saved to {best_path}")
+                print(f"[train.py] New best reward={reward:.3f} - checkpoint saved to {best_path}")
         if (i + 1) % CHECKPOINT_FREQ == 0:
             ckpt_path = os.path.join(CHECKPOINT_DIR, f"iter_{i+1:04d}")
             algo.save_to_path(ckpt_path)
@@ -232,6 +232,7 @@ def main():
         run_validate(env_config, episodes=max(args.episodes, 2))
     else:
         lhs_pool_path = env_config.get("lhs_pool_path", "runs/lhs_pool.json")
+        _sweep_orphan_pending(env_config.get("runs_base_dir", "runs"))
         if not os.path.exists(lhs_pool_path):
             print(f"[train.py] LHS pool not found at {lhs_pool_path} - running LHS sampler first...")
             from autochaos.lhs_sampler import run_lhs_sampler

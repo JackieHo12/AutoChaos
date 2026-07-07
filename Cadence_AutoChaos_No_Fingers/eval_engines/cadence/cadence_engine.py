@@ -193,7 +193,7 @@ class CadenceEngine:
                 )
             except subprocess.TimeoutExpired:
                 elapsed = time.time() - t0
-                print(f"[CadenceEngine] Spectre TIMEOUT after {elapsed:.1f}s — raising SpectreSimulationError")
+                print(f"[CadenceEngine] Spectre TIMEOUT after {elapsed:.1f}s - raising SpectreSimulationError")
                 raise SpectreSimulationError(f"Spectre timed out after {self.spectre_timeout}s")
             except Exception as exc:
                 elapsed = time.time() - t0

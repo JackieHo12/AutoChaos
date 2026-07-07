@@ -151,7 +151,7 @@ def run_lhs_sampler(config_path: str, map_config_path: str, M: int = 250, N: int
         else:
             print(f'[LHS] Nominal already in pool (CR={nominal_cr:.4f})', flush=True)
     else:
-        print('[LHS] WARNING: nominal simulation failed — skipping injection', flush=True)
+        print('[LHS] WARNING: nominal simulation failed - skipping injection', flush=True)
     pool_data = select_pool(feasible, N)
     os.makedirs(os.path.dirname(os.path.abspath(pool_path)), exist_ok=True)
     with open(pool_path, 'w') as f:
