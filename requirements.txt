@@ -1,0 +1,19 @@
+# Environment used for the reported runs: Python 3.12.10 (conda env), CPU only.
+ray[rllib]==2.51.2
+torch==2.12.*        # CPU build; a GPU is not required (simulation dominates runtime)
+gymnasium            # environment interface
+numpy                # numerical computation
+scipy                # numerical analysis
+pandas               # results handling
+pyarrow              # results handling and caching
+pyyaml               # configuration parsing
+pydantic             # configuration validation
+matplotlib           # plotting
+
+# Ray runtime dependencies, installed automatically with ray[rllib];
+# listed to document the full environment of the reported runs.
+filelock
+lz4
+dm-tree
+rich
+typer

@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Run outputs (large, machine-specific)
+ray_results/
+*.log
+training_log_*.txt
+progress.csv
+metrics_cache.db
+run_config.json
+top_designs*.json
+lhs_pool.json
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Backups
+*.bak
+*.bak_*
+*~
+* - Copy.*
