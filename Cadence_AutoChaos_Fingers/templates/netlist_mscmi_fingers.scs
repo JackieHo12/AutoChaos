@@ -1,0 +1,56 @@
+\
+
+simulator lang=spectre
+
+global 0
+
+parameters Vc_val=0 vin=0 W_PM14={W_PM14} W_PM5={W_PM5} W_NM4={W_NM4} W_NM13={W_NM13} W_NM1={W_NM1} W_PM1={W_PM1} W_PM9={W_PM9} W_PM17={W_PM17} W_PM18={W_PM18} W_PM19={W_PM19} W_PM4={W_PM4} W_NM7={W_NM7} L_PM17={L_PM17} L_PM18={L_PM18} L_PM19={L_PM19} L_PM5={L_PM5} L_PM9={L_PM9} L_PM4={L_PM4} L_PM1={L_PM1} L_NM4={L_NM4} L_NM13={L_NM13} L_NM1={L_NM1} L_NM7={L_NM7}
+
+include "/ece-tools/open_pdks/GPDK/gpdk045_v_6_0/gpdk045/../models/spectre/gpdk045.scs" section={PROCESS}
+
+subckt INVX1_GPDK45 A VDD VSS Y
+    NM0 (Y A VSS VSS) g45n1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(1)
+    PM0 (Y A VDD VDD) g45p1lvt w=(360n) l=45n nf=3 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(1)
+ends INVX1_GPDK45
+
+subckt TGATX1_GPDK45 VDD VSS c cb in out
+    NM0 (in c out VSS) g45n1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(1)
+    PM0 (out cb in VDD) g45p1lvt w=(270n) l=45n nf=1 sa=140n sb=140n sd=160n sca=141.82643 scb=0.10143 scc=0.01737 m=(1)
+ends TGATX1_GPDK45
+
+I15 (A Vdd Vss AB) INVX1_GPDK45
+I14 (net049 Vdd Vss A) INVX1_GPDK45
+I3 (net051 Vdd Vss net049) INVX1_GPDK45
+I1 (Vdd Vss AB A XBnp1 Xnp1) TGATX1_GPDK45
+I0 (Vdd Vss A AB XAnp1 Xnp1) TGATX1_GPDK45
+NM4 (XAnp1 net019 Vss Vss) g45n1lvt w=W_NM4 l=L_NM4 nf=2 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(1)
+NM7 (net051 Xn Vss Vss) g45n1lvt w=W_NM7 l=L_NM7 nf=1 sa=140n sb=140n sd=160n sca=179.70522 scb=0.11143 scc=0.02237 m=(1)
+NM1 (XBnp1 net031 Vss Vss) g45n1lvt w=W_NM1 l=L_NM1 nf=1 sa=140n sb=140n sd=160n sca=179.70522 scb=0.11143 scc=0.02237 m=(1)
+NM13 (net031 Xn Vss Vss) g45n1lvt w=W_NM13 l=L_NM13 nf=1 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(1)
+PM5 (XAnp1 Vss Vdd Vdd) g45p1lvt w=W_PM5 l=L_PM5 nf=1 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(1)
+PM14 (XAnp1 Vc Vdd Vdd) g45p1lvt w=W_PM14 l=450n nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM17 (net059 net029 Vdd Vdd) g45p1lvt w=W_PM17 l=L_PM17 nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM18 (net019 net029 net059 Vdd) g45p1lvt w=W_PM18 l=L_PM18 nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM19 (Vss Xn net019 Vdd) g45p1lvt w=W_PM19 l=L_PM19 nf=1 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=(3)
+PM25 (Vss Vss net027 Vdd) g45p1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM24 (net028 net028 net029 Vdd) g45p1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM4 (net051 Xn Vdd Vdd) g45p1lvt w=W_PM4 l=L_PM4 nf=1 sa=140n sb=140n sd=160n sca=106.17580 scb=0.08550 scc=0.01265 m=(1)
+PM23 (net029 net029 net030 Vdd) g45p1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM22 (net030 net030 Vdd Vdd) g45p1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM26 (net027 net027 net028 Vdd) g45p1lvt w=(120n) l=45n nf=1 sa=140n sb=140n sd=160n sca=219.66794 scb=0.11175 scc=0.02632 m=(1)
+PM9 (net031 Vss Vdd Vdd) g45p1lvt w=W_PM9 l=L_PM9 nf=1 sa=140n sb=140n sd=160n sca=179.70522 scb=0.11143 scc=0.02237 m=(1)
+PM1 (XBnp1 Vss Vdd Vdd) g45p1lvt w=W_PM1 l=L_PM1 nf=1 sa=140n sb=140n sd=160n sca=179.70522 scb=0.11143 scc=0.02237 m=(1)
+
+Vdd (Vdd 0) vsource dc={VDD} type=dc
+Vss (Vss 0) vsource dc=0 type=dc
+V_Vc (Vc 0) vsource dc=Vc_val type=dc
+V_Xn (Xn 0) vsource dc=vin type=dc
+
+simulatorOptions options psfversion="1.1.0" reltol=1e-3 vabstol=1e-6 iabstol=1e-12 temp={TEMP} scalem=1.0 scale=1.0 compatible=spectre
+
+vc_sweep sweep param=Vc_val start=0 stop=1.1 step=0.005 {{
+    vin_sweep dc param=vin start=0 stop=1.1 step=0.001 write="spectre.dc" maxiters=150 maxsteps=10000 annotate=status
+
+}}
+
+saveOptions options save=allpub

@@ -1,0 +1,49 @@
+
+// AutoChaos parametric DC sweep -- topology2 (3T)
+
+simulator lang=spectre
+
+global 0
+
+parameters Vc_val=0 vin=0
+
+include "/ece-tools/open_pdks/GPDK/gpdk045_v_6_0/gpdk045/../models/spectre/gpdk045.scs" section={PROCESS}
+
+
+
+subckt Topology2 VIN Vc Vdd Vout gnd
+
+    PM0 (Vout Vc Vdd Vdd) g45p1lvt w={W_PM0} l=45n nf=1 as=16.8f ad=16.8f ps=520n pd=520n nrd=1.16667 nrs=1.16667 sa=140n sb=140n sd=160n sca=226.00151 scb=0.11734 scc=0.02767 m=1
+
+    PM1 (gnd VIN Vout Vdd) g45p1lvt w={W_PM1} l=45n nf=1 as=1.12p ad=1.12p ps=16.28u pd=16.28u nrd=17.5m nrs=17.5m sa=140n sb=140n sd=160n sca=44.95198 scb=0.05033 scc=0.00571 m=1
+
+    NM0 (Vout VIN gnd gnd) g45n1lvt w={W_NM0} l={L_NM0} nf=1 as=35f ad=35f ps=780n pd=780n nrd=560m nrs=560m sa=140n sb=140n sd=160n sca=121.81260 scb=0.07142 scc=0.01388 m=1
+
+ends Topology2
+
+
+
+I0 (net3 net2 net4 net5 0) Topology2
+
+V2 (net2 0) vsource dc=Vc_val type=dc
+
+V1 (net3 0) vsource dc=vin    type=dc
+
+V0 (net4 0) vsource dc={VDD}  type=dc
+
+
+
+simulatorOptions options psfversion="1.1.0" reltol=1e-3 vabstol=1e-6 iabstol=1e-12 temp={TEMP} scalem=1.0 scale=1.0 compatible=spectre
+
+
+
+vc_sweep sweep param=Vc_val start=0 stop=1.1 step=0.002 {{
+
+    vin_sweep dc param=vin start=0 stop=1.1 step=0.002 write="spectre.dc" maxiters=150 maxsteps=10000 annotate=status
+
+}}
+
+
+
+saveOptions options save=allpub
+

@@ -1,0 +1,183 @@
+netlist_template: templates/netlist_mscmi_fingers.scs
+params:
+  W_PM17:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM18:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM19:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM14:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM5:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM9:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM4:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_PM1:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_NM4:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_NM13:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_NM1:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  W_NM7:
+  - 1.2e-07
+  - 2.0e-06
+  - 1.2e-07
+  L_PM17:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_PM18:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_PM19:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_PM5:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_PM9:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_PM4:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_PM1:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_NM4:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_NM13:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_NM1:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+  L_NM7:
+  - 4.5e-08
+  - 4.5e-07
+  - 5.0e-09
+nominal:
+  W_PM17: 1.2e-07
+  W_PM18: 1.2e-07
+  W_PM19: 1.2e-07
+  W_PM14: 1.2e-07
+  W_PM5: 1.2e-07
+  W_PM9: 1.8e-07
+  W_PM4: 4.8e-07
+  W_PM1: 1.8e-07
+  W_NM4: 2.4e-07
+  W_NM13: 1.2e-07
+  W_NM1: 1.8e-07
+  W_NM7: 1.8e-07
+  L_PM17: 4.5e-08
+  L_PM18: 4.5e-08
+  L_PM19: 4.5e-08
+  L_PM5: 4.5e-08
+  L_PM9: 4.5e-08
+  L_PM4: 4.5e-08
+  L_PM1: 4.5e-08
+  L_NM4: 4.5e-08
+  L_NM13: 5.0e-08
+  L_NM1: 4.5e-08
+  L_NM7: 4.5e-08
+fixed_lengths:
+  W_PM14: 4.5e-07
+target_chaos_metrics:
+  ALE_min: 0.35
+  chaotic_ratio_min: 0.95
+normalize:
+- 0.44
+- 0.95
+dc_sweep:
+  Vc_start: 0.0
+  Vc_stop: 1.1
+  Vc_step: 0.005
+  Vin_start: 0.0
+  Vin_stop: 1.1
+  Vin_step: 0.001
+  output_node: Xnp1
+  temperature: 27
+  VDD: 1.1
+pvt_reward:
+  tau_ALE: 0.35
+  tau_CR: 0.95
+  alpha: 0.6
+  bonus: 2.0
+  penalty: 1.0
+  w_ALE: 0.6
+  w_CR: 0.4
+  progressive_tau: 0.1
+  robust_credit: 2.0
+nominal_metrics:
+  ALE: 0.51
+  CR: 1.0
+  MLE: 0.54
+  per_corner:
+    tt:
+      CR: 1.0
+      ALE: 0.51
+      MLE: 0.54
+    ss:
+      CR: 1.0
+      ALE: 0.39
+      MLE: 0.45
+    ff:
+      CR: 1.0
+      ALE: 0.52
+      MLE: 0.55
+  worst_corner_ALE: 0.39
+pvt_corners:
+- process: tt
+  VDD: 1.1
+  temp: 27
+- process: ss
+  VDD: 1.045
+  temp: 70
+- process: ff
+  VDD: 1.155
+  temp: 0
+curriculum:
+  enabled: false
+  stages:
+  - reward_threshold: -0.5
+    progressive_tau: 0.6
+  - reward_threshold: 0.0
+    progressive_tau: 0.75
+finger_mode: true
+finger_step: 1.2e-07

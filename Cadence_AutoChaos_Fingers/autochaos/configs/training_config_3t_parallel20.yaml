@@ -1,0 +1,73 @@
+env_config:
+  generalize: false
+  mode: train
+  num_workers: 20
+  engine: cadence
+  map_config_path: autochaos/configs/map_config_3t.yaml
+  max_episode_steps: 5
+  csv_path: runs/manual_test/result.csv
+  spectre_timeout: 1200
+  ocean_timeout: 900
+  progressive_penalty: 0.1
+  adaptive_delta_max: 10
+  adaptive_delta_min: 1
+  A_max: 1000000
+  lambda_a: 0.0
+  lhs_pool_path: runs/lhs_pool.json
+  lhs_M: 500
+  lhs_N: 50  # Increased for more diverse starting points
+  lhs_workers: 5
+  lhs_spectre_timeout: 1200
+  lhs_ocean_timeout: 1200
+  # ── run11 additions ──────────────────────────────────────────────
+  # Retry transient Spectre rc!=0 once (run10: 137 netlists failed-then-succeeded)
+  spectre_retries: 1
+  # License-queue timeout; MUST be < spectre_timeout or Python kills queued jobs
+  lqtimeout: 900
+  # Duplicate-sim wait window (s); run10 mean sim 408s, old 240s window wasted >=15% compute
+  cache_wait_s: 500
+  # Action step-size anneal: 0.995 kept delta at 9-10 forever (delta=1 at iter ~460).
+  # 0.97 -> coarse search early, delta=1 (fine refinement) by ~iter 76.
+  adaptive_beta: 0.97
+
+train_batch_size_per_learner: 100
+sgd_minibatch_size: 40
+num_sgd_iter: 10
+lr: 0.0003
+gamma: 0.99
+lambda: 0.95
+clip_param: 0.2
+kl_coeff: 0.2
+kl_target: 0.02
+
+# Raised 3.0 -> 10.0: returns are bimodal (-0.5 vs ~+2.6 jackpot); clipping VF loss
+# at 3.0 sat right at the jackpot magnitude and stalled the critic whenever
+# all_pass events spiked (run10 vf_explained_var crashes at iters 23-31).
+vf_clip_param: 10.0
+vf_loss_coeff: 0.5
+grad_clip: 0.5
+
+# Decay entropy over full training run
+entropy_coeff_schedule:
+  - [0, 0.05]
+  - [15000, 0.005]
+
+rollout_fragment_length: 5
+batch_mode: complete_episodes
+observation_filter: MeanStdFilter
+sample_timeout_s: 14400
+num_workers: 20
+num_envs_per_worker: 1
+num_gpus: 0
+model:
+  # obs_size=8 (2 metrics x2 + 4 params)
+  fcnet_hiddens:
+    - 256
+    - 256
+  fcnet_activation: relu
+  # Separate value and policy networks — improves training stability
+  vf_share_layers: false
+  # (fcnet_use_layernorm removed: key was never read by train.py)
+
+# Reproducibility seed (set to null to disable)
+seed: 42
