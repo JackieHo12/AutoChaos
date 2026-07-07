@@ -1,0 +1,59 @@
+env_config:
+  generalize: false
+  mode: train
+  num_workers: 20
+  engine: cadence
+  map_config_path: autochaos/configs/map_config_mscmi.yaml
+  max_episode_steps: 5
+  csv_path: runs/manual_test/result.csv
+  spectre_timeout: 2400
+  ocean_timeout: 1800
+  progressive_penalty: 0.1
+  adaptive_delta_max: 10
+  adaptive_delta_min: 1
+  A_max: 1000000
+  lambda_a: 0.0
+  lhs_pool_path: runs/lhs_pool.json
+  lhs_M: 1000
+  lhs_N: 60
+  lhs_workers: 40
+  lhs_spectre_timeout: 2400
+  lhs_ocean_timeout: 2400
+  spectre_retries: 1
+  lqtimeout: 1800
+  cache_wait_s: 800
+  adaptive_beta: 0.97
+  kl_coeff_min: 0.05
+train_batch_size_per_learner: 100
+sgd_minibatch_size: 40
+num_sgd_iter: 10
+lr: 0.0003
+gamma: 0.99
+lambda: 0.95
+clip_param: 0.2
+kl_coeff: 0.2
+kl_target: 0.02
+vf_clip_param: 10.0
+vf_loss_coeff: 0.5
+grad_clip: 0.5
+entropy_coeff_schedule:
+- - 0
+  - 0.05
+- - 20000
+  - 0.01
+- - 60000
+  - 0.0005
+rollout_fragment_length: 5
+batch_mode: complete_episodes
+observation_filter: MeanStdFilter
+sample_timeout_s: 28800
+num_workers: 20
+num_envs_per_worker: 1
+num_gpus: 0
+model:
+  fcnet_hiddens:
+  - 256
+  - 256
+  fcnet_activation: relu
+  vf_share_layers: false
+seed: 42

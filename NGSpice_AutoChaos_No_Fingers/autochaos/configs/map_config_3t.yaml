@@ -1,0 +1,92 @@
+netlist_template: templates/netlist_3t_ngspice.cir
+params:
+  W_PM0:
+  - 120e-9
+  - 10e-6
+  - 120e-9
+  W_PM1:
+  - 120e-9
+  - 10e-6
+  - 120e-9
+  W_NM0:
+  - 120e-9
+  - 10e-6
+  - 120e-9
+  L_NM0:
+  - 45e-9
+  - 2e-6
+  - 25e-9
+
+nominal:
+  W_PM0: 180e-9
+  W_PM1: 6e-6
+  W_NM0: 450e-9
+  L_NM0: 350e-9
+
+nominal_metrics:
+  ALE: 0.27
+  CR:  0.15
+  MLE: 0.37
+
+fixed_lengths:
+  L_PM0: 45e-9
+  L_PM1: 45e-9
+
+target_chaos_metrics:
+  ALE_min: 0.2
+  chaotic_ratio_min: 0.35
+
+normalize:
+- 0.2
+- 0.5
+
+dc_sweep:
+  Vc_start: 0.0
+  Vc_stop: 1.1
+  Vc_step: 0.002
+  Vin_start: 0.0
+  Vin_stop: 1.1
+  Vin_step: 0.002
+  temperature: 27
+  VDD: 1.1
+
+pvt_reward:
+  tau_ALE: 0.2
+  tau_CR: 0.35
+  alpha: 0.6
+  bonus: 2.0
+  nom_bonus: 0.5
+  penalty: 1.0
+  progressive_tau: 0.25
+  progressive_penalty: 0.1
+
+pvt_corners:
+- name: nominal
+  process: tt
+  VDD: 1.1
+  temp: 27
+- name: slow
+  process: ss
+  VDD: 1.045
+  temp: 70
+- name: fast
+  process: ff
+  VDD: 1.155
+  temp: 0
+
+lhs_pool_path: runs/lhs_pool.json
+adaptive_delta_max: 10
+adaptive_delta_min: 1
+adaptive_beta: 0.97
+A_max: 1000000.0
+lambda_a: 0.0
+
+curriculum:
+  enabled: false
+  stages:
+  - reward_threshold: -0.40
+    progressive_tau: 0.30
+  - reward_threshold: -0.20
+    progressive_tau: 0.35
+
+

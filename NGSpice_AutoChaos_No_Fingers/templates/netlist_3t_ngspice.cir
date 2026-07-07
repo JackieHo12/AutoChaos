@@ -1,0 +1,17 @@
+* AutoChaos Topology2 (3T) - NGSpice DC sweep
+* Vc_fixed={VC_FIXED:.6g}  run={RUN_IDX}
+
+.include "{MODEL_FILE}"
+
+VDD net4 0 DC {VDD}
+V2  net2 0 DC {VC_FIXED:.6g}
+VIN net3 0 DC 0
+
+M_PM0 net5 net2 net4 net4 pmos W={W_PM0} L=45n AS=16.8f AD=16.8f PS=520n PD=520n
+M_PM1 0    net3 net5 net4 pmos W={W_PM1} L=45n AS=1.12p AD=1.12p PS=16.28u PD=16.28u
+M_NM0 net5 net3 0    0    nmos W={W_NM0} L={L_NM0} AS=35f AD=35f PS=780n PD=780n
+
+.option TEMP={TEMP}
+.dc VIN {VIN_START:.6g} {VIN_STOP:.6g} {VIN_STEP:.6g}
+.save V(net5)
+.end

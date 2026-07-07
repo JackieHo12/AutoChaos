@@ -1,0 +1,46 @@
+params:
+  W_PM0:
+  - 120e-9
+  - 240e-9
+  - 20e-9
+  L_PM0:
+  - 45e-9
+  - 180e-9
+  - 15e-9
+  W_PM1:
+  - 3e-6
+  - 9e-6
+  - 5.0e-07
+  L_PM1:
+  - 45e-9
+  - 135e-9
+  - 15e-9
+  W_NM0:
+  - 250e-9
+  - 600e-9
+  - 50e-9
+  L_NM0:
+  - 150e-9
+  - 550e-9
+  - 25e-9
+target_chaos_metrics:
+  ALE_min: 0.2
+  chaotic_ratio_min: 0.5
+normalize:
+- 0.2
+- 0.5
+dc_sweep:
+  Vc_start: 0.0
+  Vc_stop: 1.1
+  Vc_step: 0.002
+  Vin_start: 0.0
+  Vin_stop: 1.1
+  Vin_step: 0.002
+  temperature: 27
+  VDD: 1.1
+pvt_reward:
+  tau_ALE: 0.2
+  tau_CR: 0.5
+  alpha: 0.6
+  bonus: 2.0
+  penalty: 1.0
