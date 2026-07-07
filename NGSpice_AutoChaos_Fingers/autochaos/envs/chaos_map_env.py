@@ -392,7 +392,7 @@ class ChaosMapEnv(gym.Env):
         for cm in corner_metrics:
             if cm.get("ALE", 0.0) < tau_ale or cm.get("chaotic_ratio", 0.0) < tau_cr:
                 return False
-        print(f"[ChaosMapEnv] SUCCESS — all_pass=True at step {self.episode_step}")
+        print(f"[ChaosMapEnv] SUCCESS - all_pass=True at step {self.episode_step}")
         return True
     def _compute_area_um2(self, param_values: dict) -> float:
         fixed_lengths = {k: float(v) for k, v in self.cfg.get("fixed_lengths", {}).items()}

@@ -11,6 +11,21 @@ CHECKPOINT_DIR = os.path.join(os.path.abspath("runs"), "checkpoints")
 CHECKPOINT_FREQ = 10
 
 
+def sweep_stale_claims(runs_base_dir):
+    try:
+        import sqlite3 as _sq
+        _dbp = os.path.join(runs_base_dir, "metrics_cache.db")
+        if os.path.exists(_dbp):
+            _con = _sq.connect(_dbp, timeout=60.0)
+            _con.execute("PRAGMA busy_timeout=60000")
+            _cur = _con.execute("DELETE FROM cache WHERE pending=1")
+            _con.commit()
+            print(f"[train.py] Orphan sweep: removed {_cur.rowcount} stale pending claims")
+            _con.close()
+    except Exception as _e:
+        print(f"[train.py] Orphan sweep warning: {_e}")
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config",   type=str, default="autochaos/configs/training_config_ngspice.yaml")
@@ -126,18 +141,7 @@ def run_training(env_config, train_cfg, args):
         .framework("torch")
         .debugging(seed=_seed)
     )
-    try:
-        import sqlite3 as _sq
-        _dbp = os.path.join(env_config["runs_base_dir"], "metrics_cache.db")
-        if os.path.exists(_dbp):
-            _con = _sq.connect(_dbp, timeout=60.0)
-            _con.execute("PRAGMA busy_timeout=60000")
-            _cur = _con.execute("DELETE FROM cache WHERE pending=1")
-            _con.commit()
-            print(f"[train.py] Orphan sweep: removed {_cur.rowcount} stale pending claims")
-            _con.close()
-    except Exception as _e:
-        print(f"[train.py] Orphan sweep warning: {_e}")
+    sweep_stale_claims(env_config["runs_base_dir"])
     algo = cfg.build_algo()
     print("[train.py] PPO built OK")
     if args.restore:
@@ -165,7 +169,7 @@ def run_training(env_config, train_cfg, args):
                 best_reward = reward
                 best_path   = os.path.join(CHECKPOINT_DIR, "best")
                 algo.save_to_path(best_path)
-                print(f"[train.py] New best reward={reward:.3f} — checkpoint saved to {best_path}")
+                print(f"[train.py] New best reward={reward:.3f} - checkpoint saved to {best_path}")
         if (i + 1) % CHECKPOINT_FREQ == 0:
             ckpt_path = os.path.join(CHECKPOINT_DIR, f"iter_{i+1:04d}")
             algo.save_to_path(ckpt_path)
@@ -201,6 +205,7 @@ def main():
         run_validate(env_config, episodes=max(args.episodes, 2))
     else:
         lhs_pool_path = env_config.get("lhs_pool_path", "runs/lhs_pool.json")
+        sweep_stale_claims(env_config.get("runs_base_dir","runs"))
         if not os.path.exists(lhs_pool_path):
             print(f"[train.py] LHS pool not found at {lhs_pool_path} - running LHS sampler first...")
             from autochaos.lhs_sampler import run_lhs_sampler

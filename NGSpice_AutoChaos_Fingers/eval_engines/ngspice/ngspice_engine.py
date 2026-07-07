@@ -122,8 +122,15 @@ class NGSpiceEngine:
         os.makedirs(self.runs_base_dir, exist_ok=True)
         import shutil as _shutil
         if not (os.path.isfile(self.ngspice_bin) or _shutil.which(self.ngspice_bin)):
-            raise FileNotFoundError(f"[NGSpiceEngine] ngspice not found: {self.ngspice_bin} "
-                                    f"(not a file and not on PATH; set 'ngspice_bin' in the config)")
+            # conventional Windows installer location as a last resort
+            _win_default = r"C:\ngspice\Spice64\bin\ngspice.exe"
+            if os.name == "nt" and os.path.isfile(_win_default):
+                print(f"[NGSpiceEngine]   '{self.ngspice_bin}' not on PATH; using {_win_default}")
+                self.ngspice_bin = _win_default
+            else:
+                raise FileNotFoundError(
+                    f"[NGSpiceEngine] ngspice not found: {self.ngspice_bin} "
+                    f"(not a file and not on PATH; set 'ngspice_bin' in the config)")
         if not os.path.isfile(self.model_file):
             raise FileNotFoundError(f"[NGSpiceEngine] Model file not found: {self.model_file}")
         print("[NGSpiceEngine] Initialized")
@@ -236,6 +243,13 @@ class NGSpiceEngine:
                 if not os.path.exists(_si_path):
                     with open(_si_path, "w") as _sf:
                         _sf.write("set filetype=ascii\n")
+            else:
+                # hide per-slice console windows; stdout stays piped
+                si = subprocess.STARTUPINFO()
+                si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                si.wShowWindow = subprocess.SW_HIDE
+                run_kw["startupinfo"] = si
+                run_kw["creationflags"] = 0x08000000
             result = subprocess.run(
                 [self.ngspice_bin, "-b", "-r", raw_name, net_name],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,

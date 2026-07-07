@@ -74,7 +74,7 @@ class _NGSpiceFullEngine:
         self._init_db()
         print("[NGSpiceFullEngine] Ready")
         print(f"[NGSpiceFullEngine]   model_file : {ngspice_config['model_file']}")
-        print(f"[NGSpiceFullEngine]   ngspice_bin: {ngspice_config['ngspice_bin']}")
+        print(f"[NGSpiceFullEngine]   ngspice_bin: {self.ngspice.ngspice_bin}")
         print(f"[NGSpiceFullEngine]   topology   : {ngspice_config['topology']}")
         print(f"[NGSpiceFullEngine]   cache      : {self._db_path}")
         print(f"[NGSpiceFullEngine]   cache_wait : {self._cache_wait_s:.0f}s, retries={self._retries}")
@@ -161,7 +161,7 @@ class _NGSpiceFullEngine:
                 print(f"[NGSpiceFullEngine] Waiting for duplicate sim... ({w*2}s)")
             time.sleep(2)
         else:
-            print("[NGSpiceFullEngine] Wait window expired — simulating without claim")
+            print("[NGSpiceFullEngine] Wait window expired - simulating without claim")
         try:
             # simulate with one retry on transient failure
             csv_path = None
@@ -174,7 +174,7 @@ class _NGSpiceFullEngine:
                     last_exc = e
                     if attempt < self._retries:
                         print(f"[NGSpiceFullEngine] Sim failed (attempt "
-                              f"{attempt+1}/{self._retries+1}): {e} — retrying")
+                              f"{attempt+1}/{self._retries+1}): {e} - retrying")
                         time.sleep(1.0)
             if csv_path is None:
                 raise last_exc
@@ -203,7 +203,7 @@ class _NGSpiceFullEngine:
             except Exception as e:
                 # A cache failure must never become a lost result
                 print(f"[NGSpiceFullEngine] WARNING: cache write failed after "
-                      f"retries ({e}) — returning live metrics anyway")
+                      f"retries ({e}) - returning live metrics anyway")
             import shutil as _shutil
             run_dir = os.path.dirname(csv_path)
             if os.path.isdir(run_dir):
