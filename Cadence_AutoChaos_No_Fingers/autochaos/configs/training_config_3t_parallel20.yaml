@@ -19,7 +19,7 @@ env_config:
   lhs_workers: 5
   lhs_spectre_timeout: 1200
   lhs_ocean_timeout: 1200
-  # ── run11 additions ──────────────────────────────────────────────
+  # run11 additions
   # Retry transient Spectre rc!=0 once (run10: 137 netlists failed-then-succeeded)
   spectre_retries: 1
   # License-queue timeout; MUST be < spectre_timeout or Python kills queued jobs
@@ -65,7 +65,7 @@ model:
     - 256
     - 256
   fcnet_activation: relu
-  # Separate value and policy networks — improves training stability
+  # Separate value and policy networks - improves training stability
   vf_share_layers: false
   # (fcnet_use_layernorm removed: key was never read by train.py)
 

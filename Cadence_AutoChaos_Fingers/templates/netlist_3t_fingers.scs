@@ -1,4 +1,4 @@
-// AutoChaos parametric DC sweep — topology2 (3T) — finger-aware
+// AutoChaos parametric DC sweep - topology2 (3T) - finger-aware
 simulator lang=spectre
 global 0
 parameters Vc_val=0 vin=0

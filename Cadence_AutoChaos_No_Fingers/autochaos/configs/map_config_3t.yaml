@@ -4,7 +4,7 @@ params:
   # W minimums raised 45n -> 120n: gpdk045 legal minimum device WIDTH is 120nm.
   # Sub-minimum widths are unmanufacturable and were strongly correlated with
   # instant Spectre rc=2 fatals in run10. L minimum stays 45nm (the node's legal
-  # minimum LENGTH — run10's best designs use L_NM0 = 45-95nm).
+  # minimum LENGTH - run10's best designs use L_NM0 = 45-95nm).
   W_PM0:
   - 120e-9
   - 10e-6
