@@ -61,8 +61,8 @@ is up without paying for corners on hopeless designs.
 Every simulated design lands in `metrics_cache.db` (SQLite), keyed by the
 exact parameter values plus corner plus model. Because actions move on a
 grid, revisits are exact hits and cost nothing. Two consequences worth
-knowing. First, the cache is also the run's archive. Every analysis script
-in `scripts/` works from it, and the tables in the thesis were built from it.
+knowing. First, the cache is also the run's archive. The result tables in the
+thesis were built from it rather than from the training log.
 Second, the key does not include which run produced it, so if you switch
 device model files you must start with a fresh cache. Otherwise stale
 metrics from the old model will be served for matching geometries.
@@ -95,8 +95,8 @@ comes from `--episodes` on the command line.
 only the CSV surviving on NGSpice), the LHS pool, and the Ray results
 directory with `progress.csv` and `result.json` per training iteration.
 `metrics_cache.db` accumulates at the package root. The training log you
-tee'd is the best record of what actually happened. The analysis scripts
-cross-reference it with the cache.
+tee'd is the best record of what actually happened, and the cache holds the
+metrics of every design the log mentions.
 
 ## Reading a run
 

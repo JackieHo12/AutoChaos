@@ -137,8 +137,7 @@ class NGSpiceEngine:
         print(f"[NGSpiceEngine]   timeout/run  : {self.timeout}s")
         print("[NGSpiceEngine]   NOTE: PROCESS corner param (tt/ss/ff) is NOT applied -\n"
               "[NGSpiceEngine]   the single BPTM model file is used for all corners, so\n"
-              "[NGSpiceEngine]   corners vary VDD and TEMP only (VT corners, not full PVT).\n"
-              "[NGSpiceEngine]   Document this in the thesis; see corner_model_files TODO.")
+              "[NGSpiceEngine]   corners vary VDD and TEMP only (VT corners, not full PVT).")
     def evaluate(self, params: Dict, run_id: Optional[str] = None) -> str:
         params = self._remap_params(params)
         if run_id is None:
