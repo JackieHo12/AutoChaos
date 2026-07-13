@@ -35,13 +35,13 @@ conda activate autochaos
 pip install -r requirements.txt
 ```
 
-Everything is CPU, simulation dominates the runtime, a GPU buys you nothing.
+Everything runs on CPU. Simulation dominates the runtime, so a GPU buys you nothing.
 
 ## Running the NGSpice packages
 
 Install NGSpice (apt install ngspice on Debian/Ubuntu, or the Windows
 installer). If ngspice is not on your PATH, put the full path in the training
-config, line `ngspice_bin` in `autochaos/configs/training_config_ngspice.yaml`:
+config. The line is `ngspice_bin` in `autochaos/configs/training_config_ngspice.yaml`:
 
 ```yaml
 ngspice_bin: "C:\\ngspice\\Spice64\\bin\\ngspice.exe"
@@ -67,7 +67,7 @@ python autochaos\train.py --config autochaos\configs\training_config_ngspice.yam
 
 You should see the init banner (template path, sweep, binary), then 551/551
 slice completions per evaluation and a finite reward per step. Negative
-rewards are normal here, random designs are rarely chaotic. Validate floors at
+rewards are normal here because random designs are rarely chaotic. Validate floors at
 2 episodes, so expect around 12 evaluations.
 
 Training:
@@ -77,7 +77,7 @@ PYTHONPATH=. python autochaos/train.py --config autochaos/configs/training_confi
 ```
 
 The iteration count comes from `--episodes` on the command line, not from the
-YAML. `--workers` is the number of Ray rollout workers; each worker runs its
+YAML. `--workers` is the number of Ray rollout workers. Each worker runs its
 own parallel pool of ngspice processes (`max_workers` in the config), so total
 process count is roughly workers times max_workers. Keep that product sensible
 for your core count.
@@ -93,7 +93,7 @@ Two edits before anything runs, both site-specific:
    environment script. The default in the engine is the path from the
    machine this was developed on and will not exist at your site.
 
-Validate first (the `-u` matters: without it Python block-buffers through the
+Validate first (the `-u` matters because without it Python block-buffers through the
 pipe and the terminal stays silent for the whole first simulation):
 
 ```
@@ -104,8 +104,8 @@ Each evaluation is a full nested parametric DC sweep in one Spectre run, then
 an OCEAN export to CSV, then the Python chaos analysis. Watch for
 "Spectre finished (rc=0)", the PSF count line (551 DC sweeps expected for the
 3T config), "OCEAN finished (rc=0)", and a metrics line per corner. On a
-shared server your simulations queue for licenses behind other users; the
-`lqtimeout` setting covers that wait and a few minutes of silence per
+shared server your simulations queue for licenses behind other users. The
+`lqtimeout` setting covers that wait, and a few minutes of silence per
 simulation is normal.
 
 Full training on a shared server:
@@ -117,7 +117,7 @@ PYTHONPATH=. python -u autochaos/train.py --config autochaos/configs/training_co
 ```
 
 The two exports are not optional folklore. Ray puts its object store under
-/tmp by default and will happily fill the root filesystem on a long run;
+/tmp by default and will happily fill the root filesystem on a long run.
 RAY_TMPDIR moves it to your home. The memory monitor gets disabled because on
 a busy multi-user box it kills workers that are merely waiting on licenses.
 Pick `--workers` against your license pool: every worker holds a Spectre slot
@@ -125,7 +125,7 @@ while simulating (and an OCEAN slot while exporting), so 20 workers means up
 to 20 concurrent licenses of each. If someone else is running too, size down.
 
 If you Ctrl-C a Cadence run, check for orphaned simulator processes before
-launching again, they keep holding licenses:
+launching again. They keep holding licenses:
 
 ```
 ps -u $USER -o pid,etime,cmd | grep spectre
@@ -140,7 +140,7 @@ Everything lands under `runs/` in the package folder:
 
 * `run_config.json` is written at launch and records the exact configuration
   the run started with. Treat this file, not the YAML in configs/, as the
-  authoritative record of a run. YAMLs get edited between runs, launch
+  authoritative record of a run. YAMLs get edited between runs, but launch
   records do not.
 * `progress.csv` has per-iteration training metrics.
 * `metrics_cache.db` is a SQLite cache of every simulated design and corner,
@@ -168,23 +168,22 @@ the DC sweep block, the PVT corners, and the reward thresholds. The full
 walkthrough, including how the sweep and the CSV format connect and what to
 set when your output node is not net5, is in
 `docs/ADDING_YOUR_OWN_CIRCUIT.md`. A map config that does not declare a
-netlist template is a hard error, there is no built-in circuit to fall back
+netlist template is a hard error. There is no built-in circuit to fall back
 to.
 
 ## Things worth knowing
 
 * CR and ALE are only meaningful within one device model. Numbers from
-  gpdk045 and numbers from BPTM are not comparable, the same geometry can be
+  gpdk045 and numbers from BPTM are not comparable. The same geometry can be
   strongly chaotic under one and nearly dead under the other.
 * The NGSpice packages vary voltage and temperature per corner but use the
-  single BPTM model card for all process corners; the engine prints a note
+  single BPTM model card for all process corners. The engine prints a note
   about this at startup. The Cadence packages select real PDK process
   sections per corner.
 * MSCMI configs and netlists in the Cadence packages take much longer per
-  simulation than the 3T ones, the timeouts in their training config reflect
-  that. Start with 3T when checking a new setup.
+  simulation than the 3T ones, and the timeouts in their training config
+  reflect that. Start with 3T when checking a new setup.
 
 ## License
 
-No license file yet. Until one is added, default copyright applies. If you
-want to build on this, open an issue.
+Default copyright applies.
