@@ -28,7 +28,7 @@ _SIM_ERRORS = (SpectreSimulationError, NGSpiceSimulationError)
 class ChaosMapEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
     PERF_LOW = -1.0
-    PERF_HIGH =  1.0
+    PERF_HIGH = 1.0
     def __init__(self, env_config: Dict = None, **kwargs):
         super().__init__()
         if env_config is None:
@@ -36,13 +36,13 @@ class ChaosMapEnv(gym.Env):
         if kwargs:
             env_config = dict(env_config)
             env_config.update(kwargs)
-        self.mode        = env_config.get("mode", "train")
+        self.mode = env_config.get("mode", "train")
         self._env_config = dict(env_config)
-        self.generalize  = env_config.get("generalize", True)
+        self.generalize = env_config.get("generalize", True)
         self.num_workers = int(env_config.get("num_workers", 0))
-        default_engine   = "matlab" if str(self.mode).lower() == "validate" else "mock"
+        default_engine = "matlab" if str(self.mode).lower() == "validate" else "mock"
         self.engine_name = str(env_config.get("engine", default_engine)).lower()
-        self.csv_path    = env_config.get("csv_path", env_config.get("test_csv", "data/test_result.csv"))
+        self.csv_path = env_config.get("csv_path", env_config.get("test_csv", "data/test_result.csv"))
         self.max_episode_steps = int(env_config.get("max_episode_steps", 10))
         self.spec = type("spec", (), {"id": "ChaosMapEnv-v0",
                                       "max_episode_steps": self.max_episode_steps})()
@@ -53,7 +53,7 @@ class ChaosMapEnv(gym.Env):
         )
         with open(config_path, "r") as f:
             self.cfg = yaml.safe_load(f)
-        self.params                  = self._parse_params(self.cfg["params"])
+        self.params = self._parse_params(self.cfg["params"])
         self.params_id = list(self.params.keys())
         self.fallback_target_metrics = dict(self.cfg["target_chaos_metrics"])
         self.target_metrics = dict(self.fallback_target_metrics)
@@ -68,34 +68,34 @@ class ChaosMapEnv(gym.Env):
             low=self.PERF_LOW, high=self.PERF_HIGH, shape=(obs_size,), dtype=np.float32)
         engine_cfg = {
             "map_config_path": os.path.abspath(config_path),
-            "config_path":     config_path,
-            "num_workers":     self.num_workers,
-            "mode":            self.mode,
-            "project_dir":     env_config.get("project_dir",   os.path.abspath(".")),
-            "runs_base_dir":   env_config.get("runs_base_dir", os.path.abspath("runs")),
-            "templates_dir":   env_config.get("templates_dir", os.path.abspath("templates")),
-            "model_file":      env_config.get("model_file",    "45nm_HP.pm"),
-            "ngspice_bin":     env_config.get("ngspice_bin", "ngspice"),
+            "config_path": config_path,
+            "num_workers": self.num_workers,
+            "mode": self.mode,
+            "project_dir": env_config.get("project_dir", os.path.abspath(".")),
+            "runs_base_dir": env_config.get("runs_base_dir", os.path.abspath("runs")),
+            "templates_dir": env_config.get("templates_dir", os.path.abspath("templates")),
+            "model_file": env_config.get("model_file", "45nm_HP.pm"),
+            "ngspice_bin": env_config.get("ngspice_bin", "ngspice"),
             "ngspice_timeout": env_config.get("ngspice_timeout", 30),
-            "max_workers":     env_config.get("max_workers",   24),
-            "topology":        self.cfg.get("topology", "3t"),
-            "matlab_cmd":      env_config.get("matlab_cmd",    "matlab"),
-            "chaotic_dir":     env_config.get("chaotic_dir",   "eval_engines/matlab"),
-            "chaotic_func":    env_config.get("chaotic_func",  "chaotic"),
-            "timeout_s":       int(env_config.get("timeout_s", 600)),
+            "max_workers": env_config.get("max_workers", 24),
+            "topology": self.cfg.get("topology", "3t"),
+            "matlab_cmd": env_config.get("matlab_cmd", "matlab"),
+            "chaotic_dir": env_config.get("chaotic_dir", "eval_engines/matlab"),
+            "chaotic_func": env_config.get("chaotic_func", "chaotic"),
+            "timeout_s": int(env_config.get("timeout_s", 600)),
             "default_csv_path":self.csv_path,
             "spectre_timeout": int(env_config.get("spectre_timeout", 900)),
-            "ocean_timeout":   int(env_config.get("ocean_timeout",   900)),
+            "ocean_timeout": int(env_config.get("ocean_timeout", 900)),
         }
         self.engine = create_engine(self.engine_name, engine_cfg)
-        self.cur_params_idx:      Optional[np.ndarray] = None
-        self.cur_chaos_metrics:   Optional[Dict[str, float]] = None
+        self.cur_params_idx: Optional[np.ndarray] = None
+        self.cur_chaos_metrics: Optional[Dict[str, float]] = None
         self.cur_corner_metrics = []
-        self.pvt_reward_cfg       = self.cfg.get("pvt_reward", {})
-        self.prev_chaos_metrics:  Optional[Dict[str, float]] = None
+        self.pvt_reward_cfg = self.cfg.get("pvt_reward", {})
+        self.prev_chaos_metrics: Optional[Dict[str, float]] = None
         self.episode_step = 0
         self.training_iter = 0
-        self.current_target:      Optional[Dict[str, float]] = None
+        self.current_target: Optional[Dict[str, float]] = None
         self.base_target_metrics: Optional[Dict[str, float]] = None
         self._nominal_metrics = {
             k: float(v) for k, v in self.cfg.get("nominal_metrics", {}).items()
@@ -126,13 +126,13 @@ class ChaosMapEnv(gym.Env):
         adapt_cfg = self.cfg.get("adaptive_target_config", {})
         if not adapt_cfg.get("enabled", False):
             return fallback
-        cache_path  = adapt_cfg.get("cache_path", "runs/metrics_cache.json")
+        cache_path = adapt_cfg.get("cache_path", "runs/metrics_cache.json")
         min_samples = int(adapt_cfg.get("min_samples", 40))
-        mode        = str(adapt_cfg.get("mode", "balanced_topk")).lower()
-        top_k       = int(adapt_cfg.get("top_k", 12))
-        smoothing   = float(adapt_cfg.get("smoothing", 0.70))
+        mode = str(adapt_cfg.get("mode", "balanced_topk")).lower()
+        top_k = int(adapt_cfg.get("top_k", 12))
+        smoothing = float(adapt_cfg.get("smoothing", 0.70))
         relax_factor_cfg = adapt_cfg.get("relax_factor", {})
-        floor_cfg   = adapt_cfg.get("floor", {})
+        floor_cfg = adapt_cfg.get("floor", {})
         ceiling_cfg = adapt_cfg.get("ceiling", {})
         score_weights = adapt_cfg.get("score_weights", {})
         if not os.path.isabs(cache_path):
@@ -150,7 +150,7 @@ class ChaosMapEnv(gym.Env):
         for _, entry in cache.items():
             try:
                 ale = float(entry.get("ALE", 0.0))
-                cr  = float(entry.get("chaotic_ratio", 0.0))
+                cr = float(entry.get("chaotic_ratio", 0.0))
             except Exception:
                 continue
             if np.isfinite(ale) and np.isfinite(cr):
@@ -160,13 +160,13 @@ class ChaosMapEnv(gym.Env):
         if mode != "balanced_topk":
             return fallback
         w_ale = float(score_weights.get("ALE", 3.5))
-        w_cr  = float(score_weights.get("chaotic_ratio", 5.0))
+        w_cr = float(score_weights.get("chaotic_ratio", 5.0))
         ranked = sorted(valid_rows,
                         key=lambda r: w_ale * r["ALE"] + w_cr * r["chaotic_ratio"],
                         reverse=True)
         top_rows = ranked[:max(1, min(top_k, len(ranked)))]
         observed = {
-            "ALE_min":           float(np.mean([r["ALE"] for r in top_rows])),
+            "ALE_min": float(np.mean([r["ALE"] for r in top_rows])),
             "chaotic_ratio_min": float(np.mean([r["chaotic_ratio"] for r in top_rows])),
         }
         adapted = {}
@@ -175,7 +175,7 @@ class ChaosMapEnv(gym.Env):
             relaxed = obs_val * float(relax_factor_cfg.get(metric_name, 1.0))
             blended = (1.0 - smoothing) * float(fallback_value) + smoothing * float(relaxed)
             floor_v = float(floor_cfg.get(metric_name, -np.inf))
-            ceil_v = float(ceiling_cfg.get(metric_name,  np.inf))
+            ceil_v = float(ceiling_cfg.get(metric_name, np.inf))
             adapted[metric_name] = float(np.clip(blended, floor_v, ceil_v))
         print(f"[ChaosMapEnv] Adaptive targets: "
               f"ALE_min={adapted.get('ALE_min',0):.4f} "
@@ -202,7 +202,7 @@ class ChaosMapEnv(gym.Env):
                 self._lhs_pool_cache = _pool
             if _pool:
                 _entry = _pool[self.np_random.integers(0, len(_pool))]
-                _p     = _entry["params"]
+                _p = _entry["params"]
                 init_idx = []
                 for name, vals in self.params.items():
                     if name in _p:
@@ -229,7 +229,7 @@ class ChaosMapEnv(gym.Env):
     def step(self, action: np.ndarray):
         delta_max = int(self._cfg("adaptive_delta_max", 10))
         delta_min = int(self._cfg("adaptive_delta_min", 1))
-        beta      = float(self._cfg("adaptive_beta", 0.995))
+        beta = float(self._cfg("adaptive_beta", 0.995))
         delta = max(delta_min, int(round(delta_max * (beta ** self.training_iter))))
         adj = np.array([self.action_meaning[int(a)] * delta for a in action], dtype=np.int32)
         self.cur_params_idx = np.clip(
@@ -266,13 +266,13 @@ class ChaosMapEnv(gym.Env):
         self.cur_corner_metrics = [dict(zero)]
         self._progressive_fast_penalty = True
         self._progressive_cr_nom = 0.0
-        self._progressive_C_pen        = float(self._cfg('progressive_penalty', 0.1))
+        self._progressive_C_pen = float(self._cfg('progressive_penalty', 0.1))
         return zero
     def _evaluate_corner(self, param_values: dict, vdd: float, temp: float, process: str = "tt") -> dict:
         import traceback
         corner_params = dict(param_values)
-        corner_params["VDD"]     = vdd
-        corner_params["TEMP"]    = temp
+        corner_params["VDD"] = vdd
+        corner_params["TEMP"] = temp
         corner_params["PROCESS"] = process
         try:
             return self.engine.evaluate(corner_params)
@@ -344,10 +344,10 @@ class ChaosMapEnv(gym.Env):
     def _compute_reward(self) -> float:
         from autochaos.envs.reward_pvt import compute_pvt_reward, format_pvt_log, DEFAULT_TAU_ALE, DEFAULT_TAU_CR
         if getattr(self, "_progressive_fast_penalty", False):
-            cr_nom  = getattr(self, "_progressive_cr_nom", 0.0)
-            C_pen   = getattr(self, "_progressive_C_pen", 0.1)
+            cr_nom = getattr(self, "_progressive_cr_nom", 0.0)
+            C_pen = getattr(self, "_progressive_C_pen", 0.1)
             cfg_pvt = getattr(self, "pvt_reward_cfg", {})
-            w_cr    = float(cfg_pvt.get("w_CR", 0.5))
+            w_cr = float(cfg_pvt.get("w_CR", 0.5))
             fast_reward = w_cr * (cr_nom ** 1.5) - C_pen
             print(f"[RewardPVT] Progressive fast reject: CR_nom={cr_nom:.4f} => REWARD={fast_reward:.4f}")
             return fast_reward
@@ -363,18 +363,18 @@ class ChaosMapEnv(gym.Env):
         reward, dbg = compute_pvt_reward(
             corner_metrics,
             tau_ale =float(cfg_pvt.get("tau_ALE", DEFAULT_TAU_ALE)),
-            tau_cr  =float(cfg_pvt.get("tau_CR",  DEFAULT_TAU_CR)),
-            w_ale   =float(cfg_pvt.get("w_ALE",   0.5)),
-            w_cr    =float(cfg_pvt.get("w_CR",    0.5)),
-            alpha   =float(cfg_pvt.get("alpha",   0.6)),
-            bonus   =float(cfg_pvt.get("bonus",   2.0)),
+            tau_cr =float(cfg_pvt.get("tau_CR", DEFAULT_TAU_CR)),
+            w_ale =float(cfg_pvt.get("w_ALE", 0.5)),
+            w_cr =float(cfg_pvt.get("w_CR", 0.5)),
+            alpha =float(cfg_pvt.get("alpha", 0.6)),
+            bonus =float(cfg_pvt.get("bonus", 2.0)),
             penalty =float(cfg_pvt.get("penalty", 1.0)),
             corner_names=_corner_names,
         )
         print(f"[RewardPVT] {format_pvt_log(dbg)}")
         param_values = {name: self.params[name][self.cur_params_idx[i]]
                         for i, name in enumerate(self.params_id)}
-        A_max    = float(self._cfg("A_max",    1e6))
+        A_max = float(self._cfg("A_max", 1e6))
         lambda_a = float(self._cfg("lambda_a", 0.0))
         area_um2 = self._compute_area_um2(param_values)
         P_area = lambda_a * max(0.0, area_um2 - A_max)
@@ -388,7 +388,7 @@ class ChaosMapEnv(gym.Env):
         cfg_pvt = getattr(self, "pvt_reward_cfg", {})
         from autochaos.envs.reward_pvt import DEFAULT_TAU_ALE, DEFAULT_TAU_CR
         tau_ale = float(cfg_pvt.get("tau_ALE", DEFAULT_TAU_ALE))
-        tau_cr  = float(cfg_pvt.get("tau_CR",  DEFAULT_TAU_CR))
+        tau_cr = float(cfg_pvt.get("tau_CR", DEFAULT_TAU_CR))
         for cm in corner_metrics:
             if cm.get("ALE", 0.0) < tau_ale or cm.get("chaotic_ratio", 0.0) < tau_cr:
                 return False
@@ -417,10 +417,10 @@ class ChaosMapEnv(gym.Env):
              for idx, name in zip(self.cur_params_idx, self.params_id)],
             dtype=np.float64)
         corner_metrics_obs = getattr(self, "cur_corner_metrics", None) or [self.cur_chaos_metrics]
-        min_cr  = min(cm.get("chaotic_ratio", 0.0) for cm in corner_metrics_obs)
+        min_cr = min(cm.get("chaotic_ratio", 0.0) for cm in corner_metrics_obs)
         min_ale = min(cm.get("ALE", 0.0) for cm in corner_metrics_obs)
         cfg_pvt = getattr(self, "pvt_reward_cfg", {})
-        tau_cr  = float(cfg_pvt.get("tau_CR",  0.5))
+        tau_cr = float(cfg_pvt.get("tau_CR", 0.5))
         tau_ale = float(cfg_pvt.get("tau_ALE", 0.2))
         worst_corner_norm = np.clip(
             np.array([min_cr / max(tau_cr, 1e-9), min_ale / max(tau_ale, 1e-9)], dtype=np.float64),
@@ -429,9 +429,9 @@ class ChaosMapEnv(gym.Env):
         return np.clip(obs, self.PERF_LOW, self.PERF_HIGH).astype(np.float32)
     def _get_info(self) -> Dict:
         corner_metrics = getattr(self, "cur_corner_metrics", None) or [self.cur_chaos_metrics]
-        cfg_pvt  = getattr(self, "pvt_reward_cfg", {})
-        tau_cr   = float(cfg_pvt.get("tau_CR",  0.5))
-        tau_ale  = float(cfg_pvt.get("tau_ALE", 0.2))
+        cfg_pvt = getattr(self, "pvt_reward_cfg", {})
+        tau_cr = float(cfg_pvt.get("tau_CR", 0.5))
+        tau_ale = float(cfg_pvt.get("tau_ALE", 0.2))
         all_pass = (
             all(cm.get("chaotic_ratio", 0.0) >= tau_cr and cm.get("ALE", 0.0) >= tau_ale
                 for cm in corner_metrics)
@@ -441,22 +441,22 @@ class ChaosMapEnv(gym.Env):
                         for name, idx in zip(self.params_id, self.cur_params_idx)}
         area_um2 = self._compute_area_um2(param_values)
         return {
-            "episode_step":        self.episode_step,
-            "current_metrics":     dict(self.cur_chaos_metrics),
-            "corner_metrics":      [dict(cm) for cm in corner_metrics],
-            "min_cr":              min(cm.get("chaotic_ratio", 0.0) for cm in corner_metrics),
-            "min_ale":             min(cm.get("ALE", 0.0) for cm in corner_metrics),
-            "all_pass":            all_pass,
-            "area_um2":            area_um2,
-            "target_metrics":      dict(self.current_target),
+            "episode_step": self.episode_step,
+            "current_metrics": dict(self.cur_chaos_metrics),
+            "corner_metrics": [dict(cm) for cm in corner_metrics],
+            "min_cr": min(cm.get("chaotic_ratio", 0.0) for cm in corner_metrics),
+            "min_ale": min(cm.get("ALE", 0.0) for cm in corner_metrics),
+            "all_pass": all_pass,
+            "area_um2": area_um2,
+            "target_metrics": dict(self.current_target),
             "base_target_metrics": dict(self.base_target_metrics) if self.base_target_metrics else {},
-            "param_values":        param_values,
+            "param_values": param_values,
         }
     def _sample_random_target(self, base_target: Dict[str, float]) -> Dict[str, float]:
         gen_cfg = self.cfg.get("target_generalization", {})
         if not bool(gen_cfg.get("enabled", True)):
             return dict(base_target)
-        low  = float(gen_cfg.get("low",  0.95))
+        low = float(gen_cfg.get("low", 0.95))
         high = float(gen_cfg.get("high", 1.05))
         return {k: float(v) * np.random.uniform(low, high) for k, v in base_target.items()}
     def close(self):

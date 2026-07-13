@@ -20,12 +20,12 @@ class CircuitMapClass:
     def evaluate(self, param_dict, **kwargs):
         import numpy as np
         return {
-            "MLE":                float(np.random.uniform(0.1, 0.8)),
-            "ALE":                float(np.random.uniform(0.05, 0.5)),
-            "chaotic_ratio":      float(np.random.uniform(0.05, 0.9)),
+            "MLE": float(np.random.uniform(0.1, 0.8)),
+            "ALE": float(np.random.uniform(0.05, 0.5)),
+            "chaotic_ratio": float(np.random.uniform(0.05, 0.9)),
             "bifurcation_density": 0.0,
-            "power_mw":           0.0,
-            "area_um2":           0.0,
+            "power_mw": 0.0,
+            "area_um2": 0.0,
         }
     def _generate_eval_id(self, params: OrderedDict) -> str:
         import hashlib

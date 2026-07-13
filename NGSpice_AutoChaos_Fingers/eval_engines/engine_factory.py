@@ -51,17 +51,17 @@ class _NGSpiceFullEngine:
             os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
         )
         ngspice_config = {
-            "project_dir":    project_dir,
-            "runs_base_dir":  config.get("runs_base_dir",  os.path.join(project_dir, "runs")),
-            "templates_dir":  config.get("templates_dir",  os.path.join(project_dir, "templates")),
-            "ngspice_bin":    config.get("ngspice_bin", "ngspice"),
-            "model_file":     config.get("model_file",     "45nm_bulk.pm"),
+            "project_dir": project_dir,
+            "runs_base_dir": config.get("runs_base_dir", os.path.join(project_dir, "runs")),
+            "templates_dir": config.get("templates_dir", os.path.join(project_dir, "templates")),
+            "ngspice_bin": config.get("ngspice_bin", "ngspice"),
+            "model_file": config.get("model_file", "45nm_bulk.pm"),
             "ngspice_timeout":int(config.get("ngspice_timeout", 30)),
-            "max_workers":    int(config.get("max_workers", 24)),
-            "topology":       config.get("topology", "3t"),
+            "max_workers": int(config.get("max_workers", 24)),
+            "topology": config.get("topology", "3t"),
             "map_config_path":config.get("map_config_path", ""),
-            "finger_mode":    bool(config.get("finger_mode", False)),
-            "finger_step":    float(config.get("finger_step", 120e-9)),
+            "finger_mode": bool(config.get("finger_mode", False)),
+            "finger_step": float(config.get("finger_step", 120e-9)),
         }
         self.ngspice = NGSpiceEngine(ngspice_config)
         self.analyzer = PythonChaosAnalyzer(
@@ -182,12 +182,12 @@ class _NGSpiceFullEngine:
                 raise last_exc
             raw = self.analyzer.analyze(csv_path)
             metrics = {
-                "MLE":                 raw.get("MLE",           0.0),
-                "ALE":                 raw.get("ALE",           0.0),
-                "chaotic_ratio":       raw.get("chaotic_ratio", 0.0),
+                "MLE": raw.get("MLE", 0.0),
+                "ALE": raw.get("ALE", 0.0),
+                "chaotic_ratio": raw.get("chaotic_ratio", 0.0),
                 "bifurcation_density": 0.0,
-                "power_mw":            0.0,
-                "area_um2":            0.0,
+                "power_mw": 0.0,
+                "area_um2": 0.0,
             }
             print(f"[NGSpiceFullEngine] Step {self._step}: "
                   f"ALE={metrics['ALE']:.4f} CR={metrics['chaotic_ratio']:.4f}")

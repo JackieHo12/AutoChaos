@@ -31,11 +31,11 @@ class AutoChaosCallbacks(RLlibCallback):
             info = episode.get_infos(-1) if hasattr(episode, 'get_infos') else {}
             if not isinstance(info, dict):
                 info = {}
-            current  = info.get('current_metrics', {})
-            cr_nom   = float(current.get('chaotic_ratio', 0.0))
-            ale_nom  = float(current.get('ALE', 0.0))
-            min_cr   = float(info.get('min_cr',  cr_nom))
-            min_ale  = float(info.get('min_ale', ale_nom))
+            current = info.get('current_metrics', {})
+            cr_nom = float(current.get('chaotic_ratio', 0.0))
+            ale_nom = float(current.get('ALE', 0.0))
+            min_cr = float(info.get('min_cr', cr_nom))
+            min_ale = float(info.get('min_ale', ale_nom))
             all_pass = bool(info.get('all_pass', False))
             area_um2 = float(info.get('area_um2', 0.0))
             metrics_logger.log_value(

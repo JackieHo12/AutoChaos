@@ -158,7 +158,7 @@ class CadenceEngine:
         remapped = {remap.get(k, k): v for k, v in params.items()}
         defaults = {
             "W_PM0": 120e-9, "L_PM0": 45e-9,
-            "W_PM1": 8e-6,   "L_PM1": 45e-9,
+            "W_PM1": 8e-6, "L_PM1": 45e-9,
             "W_NM0": 250e-9, "L_NM0": 500e-9,
         }
         for k, v in defaults.items():

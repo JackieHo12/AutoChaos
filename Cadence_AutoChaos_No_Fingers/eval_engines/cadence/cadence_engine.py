@@ -57,12 +57,12 @@ class CadenceEngine:
         # sweep dimensions derived from dc_sweep in the map config
         dc = map_cfg.get("dc_sweep", {})
         vc_start = float(dc.get("Vc_start", 0.0))
-        vc_stop  = float(dc.get("Vc_stop",  1.1))
-        vc_step  = float(dc.get("Vc_step",  0.005))
+        vc_stop = float(dc.get("Vc_stop", 1.1))
+        vc_step = float(dc.get("Vc_step", 0.005))
         vn_start = float(dc.get("Vin_start", 0.0))
-        vn_stop  = float(dc.get("Vin_stop",  1.1))
-        vn_step  = float(dc.get("Vin_step",  0.001))
-        self._output_node    = dc.get("output_node", "Xnp1")
+        vn_stop = float(dc.get("Vin_stop", 1.1))
+        vn_step = float(dc.get("Vin_step", 0.001))
+        self._output_node = dc.get("output_node", "Xnp1")
         self._expected_n_vc = round((vc_stop - vc_start) / vc_step) + 1
         self._expected_n_vin = round((vn_stop - vn_start) / vn_step) + 1
         print(f"[CadenceEngine]   output_node      : {self._output_node}")
@@ -163,8 +163,8 @@ class CadenceEngine:
         # Dynamic: all tunable params from map config
         fmt = {k: to_spectre(v) for k, v in params.items()
                if k not in ("VDD", "TEMP", "PROCESS")}
-        fmt["VDD"]     = params.get("VDD", 1.1)
-        fmt["TEMP"]    = params.get("TEMP", 27)
+        fmt["VDD"] = params.get("VDD", 1.1)
+        fmt["TEMP"] = params.get("TEMP", 27)
         fmt["PROCESS"] = params.get("PROCESS", "tt")
         content = self._netlist_template.format(**fmt)
         with open(netlist_path, "w") as f:

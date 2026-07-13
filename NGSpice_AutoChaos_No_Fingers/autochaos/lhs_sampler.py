@@ -74,7 +74,7 @@ def _evaluate_sample(args):
     engine = _get_worker_engine(engine_config)
     pvt = engine_config.get('pvt_corners', [])
     if pvt:
-        nom_vdd  = float(pvt[0].get('VDD',  1.1))
+        nom_vdd = float(pvt[0].get('VDD', 1.1))
         nom_temp = float(pvt[0].get('temp', 27.0))
         nom_proc = str(pvt[0].get('process', 'tt'))
     else:
@@ -82,7 +82,7 @@ def _evaluate_sample(args):
     params_with_corner = dict(sample, VDD=nom_vdd, TEMP=nom_temp, PROCESS=nom_proc)
     try:
         result = engine.evaluate(params_with_corner)
-        cr  = result.get('chaotic_ratio', 0.0)
+        cr = result.get('chaotic_ratio', 0.0)
         ale = result.get('ALE', 0.0)
         print(f"[LHS] Sample {i+1}/{M}: CR={cr:.4f} ALE={ale:.4f}", flush=True)
         if cr > 0.0:
@@ -113,17 +113,17 @@ def run_lhs_sampler(config_path: str, map_config_path: str, M: int = 60, N: int 
     project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     pvt_corners = map_cfg.get('pvt_corners', [])
     engine_config = {
-        'project_dir':    project_dir,
-        'runs_base_dir':  os.path.join(project_dir, 'runs'),
-        'model_file':     env_config.get('model_file', '45nm_HP.pm'),
-        'ngspice_bin':    env_config.get('ngspice_bin', 'ngspice'),
+        'project_dir': project_dir,
+        'runs_base_dir': os.path.join(project_dir, 'runs'),
+        'model_file': env_config.get('model_file', '45nm_HP.pm'),
+        'ngspice_bin': env_config.get('ngspice_bin', 'ngspice'),
         'ngspice_timeout':int(env_config.get('ngspice_timeout', 30)),
-        'max_workers':    int(env_config.get('max_workers', 24)),
-        'topology':       map_cfg.get('topology', '3t'),
+        'max_workers': int(env_config.get('max_workers', 24)),
+        'topology': map_cfg.get('topology', '3t'),
         'map_config_path':os.path.abspath(map_config_path),
-        'mode':           'train',
-        'num_workers':    0,
-        'pvt_corners':    pvt_corners,
+        'mode': 'train',
+        'num_workers': 0,
+        'pvt_corners': pvt_corners,
     }
     print(f"[LHS] Generating {M} per-param stratified samples across {len(params)} parameters...", flush=True)
     samples = per_param_stratified_lhs(params, M, n_strata=3, seed=42)
@@ -163,10 +163,10 @@ def run_lhs_sampler(config_path: str, map_config_path: str, M: int = 60, N: int 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config',     required=True)
+    parser.add_argument('--config', required=True)
     parser.add_argument('--map_config', required=True)
-    parser.add_argument('--M',    type=int, default=60)
-    parser.add_argument('--N',    type=int, default=50)
+    parser.add_argument('--M', type=int, default=60)
+    parser.add_argument('--N', type=int, default=50)
     parser.add_argument('--pool', default='runs/lhs_pool.json')
     parser.add_argument('--workers', type=int, default=1)
     args = parser.parse_args()

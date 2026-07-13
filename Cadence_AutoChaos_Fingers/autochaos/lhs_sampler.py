@@ -63,7 +63,7 @@ def _evaluate_sample(args):
     _pvt = engine_config.get('pvt_corners', [])
     if _pvt:
         _nom = _pvt[0]
-        _nom_vdd  = float(_nom.get('VDD',  1.1))
+        _nom_vdd = float(_nom.get('VDD', 1.1))
         _nom_temp = float(_nom.get('temp', 27.0))
         _nom_proc = str(_nom.get('process', 'tt'))
     else:
@@ -141,7 +141,7 @@ def run_lhs_sampler(config_path: str, map_config_path: str, M: int = 250, N: int
     print('[LHS] Evaluating paper nominal design through Spectre...', flush=True)
     nominal_result = _evaluate_sample((nominal, engine_config, -1, M))
     if nominal_result is not None:
-        nominal_cr  = nominal_result['CR_nominal']
+        nominal_cr = nominal_result['CR_nominal']
         nominal_ale_val = nominal_result['ALE_nominal']
         nom_key = (round(nominal_cr, 4), round(nominal_ale_val, 4))
         existing_keys = {(round(d['CR_nominal'], 4), round(d['ALE_nominal'], 4)) for d in feasible}

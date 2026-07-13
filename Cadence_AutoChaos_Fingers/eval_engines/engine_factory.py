@@ -74,7 +74,7 @@ class _CadenceFullEngine:
         print("[CadenceFullEngine] Ready (SQLite WAL cache + Spectre + OCEAN + Python)")
     def _connect(self):
         con = sqlite3.connect(self._db_path, timeout=60.0)
-        con.execute("PRAGMA busy_timeout=60000")   # must be FIRST: later pragmas inherit it
+        con.execute("PRAGMA busy_timeout=60000")  # must be FIRST: later pragmas inherit it
         con.execute("PRAGMA journal_mode=WAL")
         con.execute("PRAGMA synchronous=NORMAL")
         return con
@@ -134,9 +134,9 @@ class _CadenceFullEngine:
                         "INSERT OR IGNORE INTO cache (key, pending) VALUES (?, 1)",
                         (cache_key,))
                     if ins.rowcount == 1:
-                        return ("claimed", None)   # we own the pending row
-                    return ("wait", None)          # lost the race - another worker owns it
-                return ("wait", None)              # pending=1 owned by another worker
+                        return ("claimed", None)  # we own the pending row
+                    return ("wait", None)  # lost the race - another worker owns it
+                return ("wait", None)  # pending=1 owned by another worker
             try:
                 state, row = self._db_op(_read_or_claim, "read/claim")
             except sqlite3.OperationalError:

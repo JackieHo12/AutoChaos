@@ -102,9 +102,9 @@ def run_training(env_config, train_cfg, args):
     else:
         env_to_module_connector = None
     _model_cfg = train_cfg.get("model", {})
-    _fcnet_hiddens   = _model_cfg.get("fcnet_hiddens", [128, 128])
+    _fcnet_hiddens = _model_cfg.get("fcnet_hiddens", [128, 128])
     _fcnet_activation = _model_cfg.get("fcnet_activation", "relu")
-    _vf_share_layers  = bool(_model_cfg.get("vf_share_layers", False))
+    _vf_share_layers = bool(_model_cfg.get("vf_share_layers", False))
     model_config = DefaultModelConfig(
         fcnet_hiddens=_fcnet_hiddens,
         fcnet_activation=_fcnet_activation,

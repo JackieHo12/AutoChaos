@@ -1,3 +1,5 @@
+netlist_template: templates/netlist_3t.scs
+
 params:
   W_PM0:
   - 120e-9

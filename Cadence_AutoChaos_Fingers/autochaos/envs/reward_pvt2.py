@@ -4,8 +4,8 @@ from typing import Dict, List, Tuple
 
 DEFAULT_CORNERS = [
     (1.100, 27.0, "nominal", "tt"),
-    (1.045, 70.0, "slow",    "ss"),
-    (1.155, 0.0,  "fast",    "ff"),
+    (1.045, 70.0, "slow", "ss"),
+    (1.155, 0.0, "fast", "ff"),
 ]
 
 # Alias so any external code importing CORNERS still works.
@@ -39,7 +39,7 @@ def _safe(x):
 
 def _corner_reward(ale, cr, tau_ale, tau_cr, w_ale, w_cr):
     s_ale = _score(ale, tau_ale)
-    s_cr = _score(cr,  tau_cr)
+    s_cr = _score(cr, tau_cr)
     r_c = w_ale * s_ale + w_cr * s_cr
     return r_c, {"ALE": ale, "CR": cr, "S_ALE": s_ale, "S_CR": s_cr, "R_c": r_c}
 
@@ -58,7 +58,7 @@ def compute_pvt_reward(corner_metrics, tau_ale=DEFAULT_TAU_ALE, tau_cr=DEFAULT_T
     n_failed = 0
     for i, cm in enumerate(corner_metrics):
         ale = _safe(cm.get("ALE", 0.0))
-        cr  = _safe(cm.get("chaotic_ratio", cm.get("CR", 0.0)))
+        cr = _safe(cm.get("chaotic_ratio", cm.get("CR", 0.0)))
         ales.append(ale)
         crs.append(cr)
         _sim_failed = bool(cm.get("sim_failed", False))
@@ -94,13 +94,13 @@ def compute_pvt_reward(corner_metrics, tau_ale=DEFAULT_TAU_ALE, tau_cr=DEFAULT_T
         return float(-0.1 * penalty), dbg
     n_valid = len(valid_ales)
     ale_wc = alpha * min(valid_ales) + (1.0 - alpha) * (sum(valid_ales) / n_valid)
-    cr_wc = alpha * min(valid_crs)  + (1.0 - alpha) * (sum(valid_crs)  / n_valid)
+    cr_wc = alpha * min(valid_crs) + (1.0 - alpha) * (sum(valid_crs) / n_valid)
     s_ale_wc = _score(ale_wc, tau_ale)
-    s_cr_wc = _score(cr_wc,  tau_cr)
+    s_cr_wc = _score(cr_wc, tau_cr)
     r_robust = w_ale * s_ale_wc + w_cr * s_cr_wc
     r_min = min(corner_rewards)
     r_mean = sum(corner_rewards) / len(corner_rewards)
-    r_bonus = bonus     if all_pass else 0.0
+    r_bonus = bonus if all_pass else 0.0
     r_nom_bonus = nom_bonus if (n == 1 and (crs[0] if crs else 0.0) >= 1.0 and (ales[0] if ales else 0.0) >= tau_ale) else 0.0
     nom_cr = crs[0] if crs else 0.0
     proximity_multiplier = 1.0

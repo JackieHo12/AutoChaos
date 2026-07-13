@@ -19,9 +19,9 @@ def _fmt(val: float) -> str:
     if val == 0.0:
         return "0"
     a = abs(val)
-    if a >= 1e-3:  return f"{val:.6g}"
-    if a >= 1e-6:  return f"{val*1e6:.6g}u"
-    if a >= 1e-9:  return f"{val*1e9:.6g}n"
+    if a >= 1e-3: return f"{val:.6g}"
+    if a >= 1e-6: return f"{val*1e6:.6g}u"
+    if a >= 1e-9: return f"{val*1e9:.6g}n"
     if a >= 1e-12: return f"{val*1e12:.6g}p"
     return f"{val:.6g}"
 
@@ -85,15 +85,15 @@ class NGSpiceEngine:
     VC_START = 0.0; VC_STOP = 1.1; VC_STEP = 0.002
     VIN_START = 0.0; VIN_STOP = 1.1; VIN_STEP = 0.002
     def __init__(self, config: Dict):
-        self.project_dir   = os.path.abspath(config.get("project_dir", "."))
+        self.project_dir = os.path.abspath(config.get("project_dir", "."))
         self.runs_base_dir = config.get("runs_base_dir", os.path.join(self.project_dir, "runs"))
-        self.model_file    = os.path.abspath(config.get("model_file", os.path.join(self.project_dir, "45nm_bulk.pm")))
-        self.ngspice_bin   = config.get("ngspice_bin", self.NGSPICE_DEFAULT)
-        self.timeout       = int(config.get("ngspice_timeout", 30))
-        self.worker_tag    = config.get("worker_tag", f"pid{os.getpid()}")
-        self.max_workers    = int(config.get("max_workers", 24))
-        self.finger_mode    = bool(config.get('finger_mode', False))
-        self.finger_step    = float(config.get('finger_step', 120e-9))
+        self.model_file = os.path.abspath(config.get("model_file", os.path.join(self.project_dir, "45nm_bulk.pm")))
+        self.ngspice_bin = config.get("ngspice_bin", self.NGSPICE_DEFAULT)
+        self.timeout = int(config.get("ngspice_timeout", 30))
+        self.worker_tag = config.get("worker_tag", f"pid{os.getpid()}")
+        self.max_workers = int(config.get("max_workers", 24))
+        self.finger_mode = bool(config.get('finger_mode', False))
+        self.finger_step = float(config.get('finger_step', 120e-9))
         if self.finger_mode:
             print(f'[NGSpiceEngine]   FINGER MODE ON, finger_step={self.finger_step}')
         self.map_config_path = config.get("map_config_path", os.path.join(self.project_dir, "autochaos", "configs", "map_config_3t.yaml"))
@@ -101,12 +101,12 @@ class NGSpiceEngine:
         with open(self.map_config_path) as _f:
             _mc = _yaml.safe_load(_f)
         _dc = (_mc or {}).get("dc_sweep", {})
-        self.VC_START  = float(_dc.get("Vc_start",  self.VC_START))
-        self.VC_STOP   = float(_dc.get("Vc_stop",   self.VC_STOP))
-        self.VC_STEP   = float(_dc.get("Vc_step",   self.VC_STEP))
+        self.VC_START = float(_dc.get("Vc_start", self.VC_START))
+        self.VC_STOP = float(_dc.get("Vc_stop", self.VC_STOP))
+        self.VC_STEP = float(_dc.get("Vc_step", self.VC_STEP))
         self.VIN_START = float(_dc.get("Vin_start", self.VIN_START))
-        self.VIN_STOP  = float(_dc.get("Vin_stop",  self.VIN_STOP))
-        self.VIN_STEP  = float(_dc.get("Vin_step",  self.VIN_STEP))
+        self.VIN_STOP = float(_dc.get("Vin_stop", self.VIN_STOP))
+        self.VIN_STEP = float(_dc.get("Vin_step", self.VIN_STEP))
         self.output_signal = "v(%s)" % _dc.get("output_node", "net5")
         _tpl_rel = (_mc or {}).get("netlist_template")
         if not _tpl_rel:
@@ -148,12 +148,12 @@ class NGSpiceEngine:
         if run_id is None:
             run_id = self._make_run_id(params)
         run_dir = os.path.join(self.runs_base_dir, run_id)
-        raw_dir  = os.path.join(run_dir, "raw")
+        raw_dir = os.path.join(run_dir, "raw")
         csv_path = os.path.join(run_dir, "result.csv")
         os.makedirs(raw_dir, exist_ok=True)
         print(f"[NGSpiceEngine] === {run_id} ===")
         print(f"[NGSpiceEngine] Params: {self._fmt_params(params)}")
-        vc_values = np.arange(self.VC_START, self.VC_STOP  + self.VC_STEP  / 2, self.VC_STEP)
+        vc_values = np.arange(self.VC_START, self.VC_STOP + self.VC_STEP / 2, self.VC_STEP)
         vin_values = np.arange(self.VIN_START, self.VIN_STOP + self.VIN_STEP / 2, self.VIN_STEP)
         n_total = len(vc_values)
         Vout_matrix = np.zeros((len(vin_values), n_total), dtype=np.float64)
@@ -309,10 +309,10 @@ class NGSpiceEngine:
         for k, v in params.items():
             try: v = float(v)
             except: parts.append(f"{k}={v}"); continue
-            if v >= 1e-3:   parts.append(f"{k}={v:.3g}")
+            if v >= 1e-3: parts.append(f"{k}={v:.3g}")
             elif v >= 1e-6: parts.append(f"{k}={v*1e6:.3g}u")
             elif v >= 1e-9: parts.append(f"{k}={v*1e9:.3g}n")
-            else:           parts.append(f"{k}={v:.3g}")
+            else: parts.append(f"{k}={v:.3g}")
         return ", ".join(parts)
     def close(self):
         pass

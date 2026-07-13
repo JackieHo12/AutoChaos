@@ -28,12 +28,12 @@ def sweep_stale_claims(runs_base_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config",   type=str, default="autochaos/configs/training_config_ngspice.yaml")
-    parser.add_argument("--restore",  type=str, default=None)
-    parser.add_argument("--mode",     type=str, default="train", choices=["train", "validate", "baseline"])
-    parser.add_argument("--engine",   type=str, default=None)
+    parser.add_argument("--config", type=str, default="autochaos/configs/training_config_ngspice.yaml")
+    parser.add_argument("--restore", type=str, default=None)
+    parser.add_argument("--mode", type=str, default="train", choices=["train", "validate", "baseline"])
+    parser.add_argument("--engine", type=str, default=None)
     parser.add_argument("--episodes", type=int, default=1000)
-    parser.add_argument("--workers",  type=int, default=None)
+    parser.add_argument("--workers", type=int, default=None)
     return parser.parse_args()
 
 
@@ -68,11 +68,11 @@ def run_training(env_config, train_cfg, args):
     from ray.rllib.connectors.env_to_module import MeanStdFilter
     from ray.tune.registry import register_env
     register_env("chaos-map-v0", lambda cfg: ChaosMapEnv(cfg))
-    num_workers             = int(train_cfg.get("num_workers", 0))
-    num_envs_per_worker     = int(train_cfg.get("num_envs_per_worker", 1))
-    rfl_raw                 = train_cfg.get("rollout_fragment_length", 10)
+    num_workers = int(train_cfg.get("num_workers", 0))
+    num_envs_per_worker = int(train_cfg.get("num_envs_per_worker", 1))
+    rfl_raw = train_cfg.get("rollout_fragment_length", 10)
     rollout_fragment_length = rfl_raw if rfl_raw == "auto" else int(rfl_raw)
-    sample_timeout_s        = float(train_cfg.get("sample_timeout_s", 1800.0))
+    sample_timeout_s = float(train_cfg.get("sample_timeout_s", 1800.0))
     ray_cpus = max(2, num_workers * num_envs_per_worker + 2)
     print(f"[train.py] FINAL train_cfg.num_workers = {num_workers}")
     print(f"[train.py] FINAL env_config.engine = {env_config.get('engine')}")
@@ -83,17 +83,17 @@ def run_training(env_config, train_cfg, args):
     total_start = time.perf_counter()
     ray.init(ignore_reinit_error=True, num_cpus=ray_cpus, num_gpus=0)
     entropy_coeff_schedule = train_cfg.get("entropy_coeff_schedule", None)
-    grad_clip_val          = train_cfg.get("grad_clip", None)
+    grad_clip_val = train_cfg.get("grad_clip", None)
     grad_clip = float(grad_clip_val) if grad_clip_val is not None else None
     _obs_filter = train_cfg.get("observation_filter", "MeanStdFilter")
     env_to_module_connector = (
         (lambda env, spaces=None, device=None: MeanStdFilter())
         if _obs_filter == "MeanStdFilter" else None
     )
-    _model_cfg        = train_cfg.get("model", {})
-    _fcnet_hiddens    = _model_cfg.get("fcnet_hiddens", [32, 16])
+    _model_cfg = train_cfg.get("model", {})
+    _fcnet_hiddens = _model_cfg.get("fcnet_hiddens", [32, 16])
     _fcnet_activation = _model_cfg.get("fcnet_activation", "relu")
-    _vf_share_layers  = bool(_model_cfg.get("vf_share_layers", False))
+    _vf_share_layers = bool(_model_cfg.get("vf_share_layers", False))
     model_config = DefaultModelConfig(
         fcnet_hiddens = _fcnet_hiddens,
         fcnet_activation =_fcnet_activation,
@@ -105,16 +105,16 @@ def run_training(env_config, train_cfg, args):
         .training(
             train_batch_size_per_learner =int(train_cfg.get("train_batch_size_per_learner",
                                               train_cfg.get("train_batch_size", 20))),
-            minibatch_size               =int(train_cfg.get("sgd_minibatch_size", 20)),
-            num_epochs                   =int(train_cfg.get("num_sgd_iter", 10)),
-            lr                           =float(train_cfg.get("lr", 3e-4)),
-            gamma                        =float(train_cfg.get("gamma", 0.99)),
-            lambda_                      =float(train_cfg.get("lambda", 0.95)),
-            clip_param                   =float(train_cfg.get("clip_param", 0.2)),
-            kl_coeff                     =float(train_cfg.get("kl_coeff", 0.3)),
-            kl_target                    =float(train_cfg.get("kl_target", 0.01)),
-            vf_clip_param                =float(train_cfg.get("vf_clip_param", 3.0)),
-            vf_loss_coeff                =float(train_cfg.get("vf_loss_coeff", 0.5)),
+            minibatch_size =int(train_cfg.get("sgd_minibatch_size", 20)),
+            num_epochs =int(train_cfg.get("num_sgd_iter", 10)),
+            lr =float(train_cfg.get("lr", 3e-4)),
+            gamma =float(train_cfg.get("gamma", 0.99)),
+            lambda_ =float(train_cfg.get("lambda", 0.95)),
+            clip_param =float(train_cfg.get("clip_param", 0.2)),
+            kl_coeff =float(train_cfg.get("kl_coeff", 0.3)),
+            kl_target =float(train_cfg.get("kl_target", 0.01)),
+            vf_clip_param =float(train_cfg.get("vf_clip_param", 3.0)),
+            vf_loss_coeff =float(train_cfg.get("vf_loss_coeff", 0.5)),
             entropy_coeff = (entropy_coeff_schedule if entropy_coeff_schedule is not None
                                            else float(train_cfg.get("entropy_coeff", 0.01))),
             grad_clip = grad_clip,
@@ -123,7 +123,7 @@ def run_training(env_config, train_cfg, args):
             num_env_runners = num_workers,
             num_envs_per_env_runner = num_envs_per_worker,
             rollout_fragment_length = rollout_fragment_length,
-            batch_mode                             =train_cfg.get("batch_mode", "complete_episodes"),
+            batch_mode =train_cfg.get("batch_mode", "complete_episodes"),
             sample_timeout_s = sample_timeout_s,
             env_to_module_connector = env_to_module_connector,
             validate_env_runners_after_construction=train_cfg.get(
@@ -158,16 +158,16 @@ def run_training(env_config, train_cfg, args):
         )
         result = algo.train()
         iter_elapsed = time.perf_counter() - iter_start
-        env_results  = result.get("env_runners", {})
-        reward       = env_results.get("episode_return_mean", float("nan"))
-        ep_len       = env_results.get("episode_len_mean",    float("nan"))
-        ep_max       = env_results.get("episode_return_max",  float("nan"))
-        timesteps    = result.get("num_env_steps_sampled_lifetime", 0)
+        env_results = result.get("env_runners", {})
+        reward = env_results.get("episode_return_mean", float("nan"))
+        ep_len = env_results.get("episode_len_mean", float("nan"))
+        ep_max = env_results.get("episode_return_max", float("nan"))
+        timesteps = result.get("num_env_steps_sampled_lifetime", 0)
         print(f"Iter {i+1}/{args.episodes}: reward={reward:.3f}, reward_max={ep_max:.3f}, ep_len={ep_len:.1f}, timesteps={timesteps}, iter_elapsed={iter_elapsed:.1f}s")
         if not (reward != reward):
             if reward > best_reward:
                 best_reward = reward
-                best_path   = os.path.join(CHECKPOINT_DIR, "best")
+                best_path = os.path.join(CHECKPOINT_DIR, "best")
                 algo.save_to_path(best_path)
                 print(f"[train.py] New best reward={reward:.3f} - checkpoint saved to {best_path}")
         if (i + 1) % CHECKPOINT_FREQ == 0:
@@ -190,8 +190,8 @@ def main():
     print(f"[train.py] Raw top-level num_workers from file: {train_cfg.get('num_workers')}")
     print(f"[train.py] Raw env_config from file: {train_cfg.get('env_config', {})}")
     env_config = train_cfg.get("env_config", {})
-    env_config["mode"]          = args.mode
-    env_config["project_dir"]   = os.path.abspath(os.getcwd())
+    env_config["mode"] = args.mode
+    env_config["project_dir"] = os.path.abspath(os.getcwd())
     env_config["runs_base_dir"] = os.path.join(env_config["project_dir"], "runs")
     env_config["templates_dir"] = os.path.join(env_config["project_dir"], "templates")
     if args.engine is not None:
@@ -212,8 +212,8 @@ def main():
             map_config_path = env_config.get("map_config_path")
             if not map_config_path:
                 raise ValueError("lhs_pool_path set but map_config_path not found in env_config")
-            M         = int(env_config.get("lhs_M", 60))
-            N         = int(env_config.get("lhs_N", 50))
+            M = int(env_config.get("lhs_M", 60))
+            N = int(env_config.get("lhs_N", 50))
             n_workers = int(env_config.get("lhs_workers", 1))
             run_lhs_sampler(args.config, map_config_path, M=M, N=N,
                             pool_path=lhs_pool_path, n_workers=n_workers)

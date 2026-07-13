@@ -471,11 +471,11 @@ class ChaosMapEnv(gym.Env):
             dtype=np.float64,
         )
         corner_metrics = getattr(self, 'cur_corner_metrics', None) or [self.cur_chaos_metrics]
-        min_cr  = min(cm.get('chaotic_ratio', 0.0) for cm in corner_metrics)
+        min_cr = min(cm.get('chaotic_ratio', 0.0) for cm in corner_metrics)
         min_ale = min(cm.get('ALE', 0.0) for cm in corner_metrics)
-        cfg_pvt  = getattr(self, 'pvt_reward_cfg', {})
-        tau_cr   = float(cfg_pvt.get('tau_CR',  0.95))
-        tau_ale  = float(cfg_pvt.get('tau_ALE', 0.35))
+        cfg_pvt = getattr(self, 'pvt_reward_cfg', {})
+        tau_cr = float(cfg_pvt.get('tau_CR', 0.95))
+        tau_ale = float(cfg_pvt.get('tau_ALE', 0.35))
         worst_corner_norm = np.clip(
             np.array([min_cr / max(tau_cr, 1e-9), min_ale / max(tau_ale, 1e-9)],
                      dtype=np.float64),
@@ -488,9 +488,9 @@ class ChaosMapEnv(gym.Env):
 
     def _get_info(self) -> Dict:
         corner_metrics = getattr(self, 'cur_corner_metrics', None) or [self.cur_chaos_metrics]
-        cfg_pvt  = getattr(self, 'pvt_reward_cfg', {})
-        tau_cr   = float(cfg_pvt.get('tau_CR',  0.95))
-        tau_ale  = float(cfg_pvt.get('tau_ALE', 0.35))
+        cfg_pvt = getattr(self, 'pvt_reward_cfg', {})
+        tau_cr = float(cfg_pvt.get('tau_CR', 0.95))
+        tau_ale = float(cfg_pvt.get('tau_ALE', 0.35))
         all_pass = all(
             cm.get('chaotic_ratio', 0.0) >= tau_cr and cm.get('ALE', 0.0) >= tau_ale
             for cm in corner_metrics
