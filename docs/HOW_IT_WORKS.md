@@ -1,6 +1,7 @@
 # How AutoChaos Works
 
-This follows one training step end to end and then explains where everything lives. The thesis covers the theory.
+This is the tour I wish I had when I started. It follows one training step end
+to end and then explains where everything lives. The thesis covers the theory.
 This document covers the code.
 
 ## One step, end to end

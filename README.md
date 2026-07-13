@@ -22,10 +22,10 @@ There are four self-contained packages, one per backend and device treatment:
 
 The four are kept as separate frozen packages on purpose, so each one matches
 exactly the configuration that produced its reported runs. The NGSpice
-packages work with no licenses at all, the model files (45nm_bulk.pm,
+packages work with no licenses at all. The model files (45nm_bulk.pm,
 45nm_HP.pm, ptm22lp.lib, ptm65.lib) are freely distributable PTM/BPTM cards
 and ship in the repo. The Cadence packages need your own Spectre install and
-PDK, no PDK content is included here.
+PDK. No PDK content is included here.
 
 ## Setting up
 
@@ -88,7 +88,7 @@ Two edits before anything runs, both site-specific:
 
 1. In `templates/netlist_3t.scs` (and any template you use), point the
    `include` line at your PDK's Spectre models. The `section={PROCESS}`
-   placeholder stays, the framework fills it per corner.
+   placeholder stays, and the framework fills it per corner.
 2. Set `cadence_setup` in the training config to your site's Cadence
    environment script. The default in the engine is the path from the
    machine this was developed on and will not exist at your site.
@@ -120,7 +120,7 @@ The two exports are not optional folklore. Ray puts its object store under
 /tmp by default and will happily fill the root filesystem on a long run.
 RAY_TMPDIR moves it to your home. The memory monitor gets disabled because on
 a busy multi-user box it kills workers that are merely waiting on licenses.
-Pick `--workers` against your license pool: every worker holds a Spectre slot
+Pick `--workers` against your license pool. Every worker holds a Spectre slot
 while simulating (and an OCEAN slot while exporting), so 20 workers means up
 to 20 concurrent licenses of each. If someone else is running too, size down.
 
@@ -186,4 +186,5 @@ to.
 
 ## License
 
-Default copyright applies.
+No license file yet. Until one is added, default copyright applies. If you
+want to build on this, open an issue.
