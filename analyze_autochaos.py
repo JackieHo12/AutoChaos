@@ -12,9 +12,12 @@ Usage:
   python analyze_autochaos.py
   python analyze_autochaos.py --run_dir . --cache metrics_cache.db --lhs lhs_pool.json
   python analyze_autochaos.py --save
+  python analyze_autochaos.py --pdk "PTM 22 nm LP"
 
 The --cache flag auto-detects format by extension (.db = SQLite, .json = JSON).
 If omitted, it searches for metrics_cache.db first, then metrics_cache.json.
+The device model shown in figure titles is detected from the run records and
+can be overridden with --pdk.
 """
 
 import argparse, json, os, sys, glob, sqlite3, re
@@ -56,12 +59,16 @@ plt.rcParams.update({
     "legend.facecolor": "white",
     "legend.edgecolor": "#cccccc",
     "legend.framealpha": 0.9,
-    "figure.titlesize": 13,
-    "axes.titlesize": 11,
-    "axes.labelsize": 10,
-    "xtick.labelsize": 9,
-    "ytick.labelsize": 9,
-    "legend.fontsize": 9,
+    "figure.titlesize": 15,
+    "figure.titleweight": "bold",
+    "axes.titlesize": 13,
+    "axes.titleweight": "bold",
+    "axes.labelsize": 12,
+    "axes.labelweight": "bold",
+    "xtick.labelsize": 11,
+    "ytick.labelsize": 11,
+    "legend.fontsize": 10,
+    "savefig.pad_inches": 0.25,
     "lines.linewidth": 1.8,
     "font.family": "serif",
     "font.serif": ["Times New Roman", "DejaVu Serif", "serif"],
@@ -69,6 +76,36 @@ plt.rcParams.update({
     "savefig.bbox": "tight",
     "savefig.facecolor": "white",
 })
+
+def finalize_style(fig):
+    """Apply bold, legible styling to every axis of a figure before saving."""
+    try:
+        st = fig._suptitle
+        if st is not None:
+            st.set_fontweight("bold")
+            if st.get_fontsize() < 14:
+                st.set_fontsize(14)
+    except Exception:
+        pass
+    for ax in fig.get_axes():
+        for lab in (ax.xaxis.label, ax.yaxis.label):
+            lab.set_fontweight("bold")
+            if lab.get_fontsize() < 12:
+                lab.set_fontsize(12)
+        ttl = ax.title
+        ttl.set_fontweight("bold")
+        if ttl.get_text() and ttl.get_fontsize() < 12:
+            ttl.set_fontsize(12)
+        for tick in ax.get_xticklabels() + ax.get_yticklabels():
+            if tick.get_fontsize() < 10:
+                tick.set_fontsize(10)
+        leg = ax.get_legend()
+        if leg is not None:
+            for txt in leg.get_texts():
+                txt.set_fontweight("bold")
+                if txt.get_fontsize() < 10:
+                    txt.set_fontsize(10)
+
 
 C_BLUE = "#1f77b4"
 C_ORANGE = "#d65f00"
@@ -79,7 +116,30 @@ C_BROWN = "#8c564b"
 C_GREY = "#7f7f7f"
 C_TEAL = "#17becf"
 
+PAPER_CR = 0.2722
+PAPER_ALE = 0.2378
+
+BASELINES = {
+    "GPDK 45 nm": {"CR": 0.2722, "ALE": 0.2378, "label": "Paper baseline"},
+    "BPTM 45 nm": {"CR": 0.2722, "ALE": 0.2378, "label": "Paper baseline"},
+}
+
+MODEL_LABELS = [
+    ("gpdk", "GPDK 45 nm", "Cadence Spectre"),
+    ("22nm", "PTM 22 nm LP", "NGSpice"),
+    ("22", "PTM 22 nm LP", "NGSpice"),
+    ("65nm", "PTM 65 nm", "NGSpice"),
+    ("65", "PTM 65 nm", "NGSpice"),
+    ("bptm", "BPTM 45 nm", "NGSpice"),
+    ("bulk", "BPTM 45 nm", "NGSpice"),
+    ("45", "BPTM 45 nm", "NGSpice"),
+]
+
+PDK_NAME = "GPDK 45 nm"
 TOPOLOGY = "3-Transistor"
+ENGINE_NAME = "Cadence Spectre"
+BASELINE_LBL = "Paper baseline"
+HAS_BASELINE = True
 TAU_CR = 0.35
 TAU_ALE = 0.20
 
@@ -126,6 +186,50 @@ KL_TARGET = 0.02
 GRAD_CLIP = 0.5
 PROG_GATE = 0.25
 
+def resolve_model(env_cfg, run_dir, cli_pdk):
+    """Work out the device model label and engine for figure titles.
+    CLI --pdk wins. Otherwise read model_file/engine from the run records,
+    falling back to any training config YAML in the run directory."""
+    engine = str(env_cfg.get("engine", "")).lower()
+    model_f = str(env_cfg.get("model_file", "")).lower()
+    source = "run records"
+    if not model_f:
+        for cand in sorted(glob.glob(os.path.join(run_dir, "*.yaml"))):
+            try:
+                import yaml
+                cfg = yaml.safe_load(open(cand))
+            except Exception:
+                continue
+            if not isinstance(cfg, dict):
+                continue
+            for key in ("model_file", "ngspice_model_file"):
+                found = cfg.get(key) or (cfg.get("env_config", {}) or {}).get(key)
+                if found:
+                    model_f = str(found).lower()
+                    source = os.path.basename(cand)
+                    break
+            if model_f:
+                break
+    label = None
+    engine_name = None
+    text = model_f if model_f else engine
+    for token, lbl, eng in MODEL_LABELS:
+        if token in text:
+            label = lbl
+            engine_name = eng
+            break
+    if engine == "ngspice" and engine_name is None:
+        engine_name = "NGSpice"
+    if engine_name is None:
+        engine_name = "Cadence Spectre"
+    if label is None:
+        label = "GPDK 45 nm" if engine_name == "Cadence Spectre" else "BPTM 45 nm"
+        source = "engine default"
+    if cli_pdk:
+        label = cli_pdk
+        source = "--pdk"
+    print(f"  [model] {label} ({engine_name}, from {source})")
+    return engine_name, label
 
 def find_latest_run():
     pattern = os.path.expanduser("~/ray_results/PPO_chaos-map-v0_*/progress.csv")
@@ -308,7 +412,7 @@ def fmt_params(wk, per_line=6, max_lines=None):
     except Exception:
         return wk[:90]
 
-def fig_reward_curve(df, save, prefix, topology_name="3-Transistor"):
+def fig_reward_curve(df, save, prefix, pdk="GPDK 45 nm", topology_name="3-Transistor"):
     """Reward learning curve: raw, rolling mean, best-so-far vs environment steps."""
     col_mean = "env_runners/episode_return_mean"
     col_max = "env_runners/episode_return_max"
@@ -334,20 +438,16 @@ def fig_reward_curve(df, save, prefix, topology_name="3-Transistor"):
     ax.set_xlabel("Environment Steps", fontsize=10)
     ax.set_ylabel("Episode Reward", fontsize=10)
     ax.set_title("AutoChaos Reward Progression During Training\n"
-                 f"({topology_name} Chaotic Circuit)")
-    ax.legend(loc="lower right")
-    ax.annotate(f"Final mean:\n{r_mean[-1]:.3f}",
-                xy=(steps[-1], r_mean[-1]),
-                xytext=(steps[-1]*0.82, r_mean[-1]+0.08),
-                fontsize=8, color=C_BLUE,
-                arrowprops=dict(arrowstyle="->", color=C_BLUE, lw=0.8))
+                 f"({topology_name} Chaotic Circuit, {pdk})")
+    ax.legend(loc="best")
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig1_reward_curve.png")
         print("  Saved: fig1_reward_curve")
     return fig
 
-def fig_search_saturation(all_sims, save, prefix, topology_name="3-Transistor"):
+def fig_search_saturation(all_sims, save, prefix, pdk="GPDK 45 nm", topology_name="3-Transistor"):
     """Best-so-far and rolling nominal CR/ALE over TT evaluations in cache order."""
     tt_sims = [s for s in all_sims if s["process"] == "tt"]
     crs = [s["cr"] for s in tt_sims]
@@ -361,13 +461,16 @@ def fig_search_saturation(all_sims, save, prefix, topology_name="3-Transistor"):
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 10), sharex=True)
     fig.suptitle("Search Saturation of Best Chaotic Metrics\n"
-                 f"({TOPOLOGY} Circuit)",
+                 f"({TOPOLOGY} Circuit, {PDK_NAME})",
                  fontsize=12)
 
     ax1.plot(x, crs, color=C_GREY, linewidth=0.5, alpha=0.4, label="Nominal CR (each eval)")
     ax1.plot(x, roll_cr, color=C_BLUE, linewidth=1.5, label="Rolling mean CR")
     ax1.plot(x, best_cr, color=C_ORANGE, linewidth=2.0, linestyle="--",
              label="Best nominal CR so far")
+    if HAS_BASELINE:
+        ax1.axhline(PAPER_CR, color=C_RED, linewidth=1.2, linestyle=":",
+                    label=f"{BASELINE_LBL} CR = {PAPER_CR:.4f}")
     ax1.axhline(TAU_CR, color=C_GREEN, linewidth=1.0, linestyle="-.",
                 label=f"Target τ_CR = {TAU_CR}")
     ax1.set_ylabel("Chaotic Ratio (CR)", fontsize=10)
@@ -379,6 +482,9 @@ def fig_search_saturation(all_sims, save, prefix, topology_name="3-Transistor"):
     ax2.plot(x, roll_ale, color=C_BLUE, linewidth=1.5, label="Rolling mean ALE")
     ax2.plot(x, best_ale, color=C_ORANGE, linewidth=2.0, linestyle="--",
              label="Best nominal ALE so far")
+    if HAS_BASELINE:
+        ax2.axhline(PAPER_ALE, color=C_RED, linewidth=1.2, linestyle=":",
+                    label=f"{BASELINE_LBL} ALE = {PAPER_ALE:.4f}")
     ax2.axhline(TAU_ALE, color=C_GREEN, linewidth=1.0, linestyle="-.",
                 label=f"Target τ_ALE = {TAU_ALE}")
     ax2.set_xlabel("Evaluation Number (TT Corner Simulations)", fontsize=10)
@@ -389,6 +495,7 @@ def fig_search_saturation(all_sims, save, prefix, topology_name="3-Transistor"):
 
     fig.tight_layout(rect=[0, 0, 0.80, 1])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig2_search_saturation.png")
         print("  Saved: fig2_search_saturation")
     return fig
@@ -438,12 +545,13 @@ def fig_pvt_funnel(all_sims, by_widths, save, prefix):
     ax.set_yticklabels(labels, fontsize=9)
     ax.set_xlabel("Number of Designs", fontsize=10)
     ax.set_title("Progressive PVT Screening of Candidate Chaotic Designs\n"
-                 f"({TOPOLOGY} Circuit)")
+                 f"({TOPOLOGY} Circuit, {PDK_NAME})")
     ax.set_xlim(0, total * 1.25)
     ax.invert_yaxis()
     ax.axvline(total, color=C_GREY, linewidth=0.5, linestyle=":")
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig3_pvt_funnel.png")
         print("  Saved: fig3_pvt_funnel")
     return fig
@@ -470,6 +578,10 @@ def fig_nominal_vs_worst(pvt_designs, save, prefix):
     ax.axhline(TAU_CR, color=C_GREEN, linewidth=1.0, linestyle="-.",
                label=f"τ_CR = {TAU_CR}", zorder=2)
     ax.axvline(TAU_CR, color=C_GREEN, linewidth=1.0, linestyle="-.", zorder=2)
+    if HAS_BASELINE:
+        ax.axhline(PAPER_CR, color=C_RED, linewidth=1.0, linestyle=":",
+                   label=f"{BASELINE_LBL} CR = {PAPER_CR:.4f}", zorder=2)
+
     for d in pvt_designs[:3]:
         ax.annotate(f"  #{pvt_designs.index(d)+1}",
                     xy=(d["nom_cr"], d["min_cr"]),
@@ -483,6 +595,7 @@ def fig_nominal_vs_worst(pvt_designs, save, prefix):
     ax.set_xlim(left=0); ax.set_ylim(bottom=0)
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig4_nominal_vs_worst.png")
         print("  Saved: fig4_nominal_vs_worst")
     return fig
@@ -507,6 +620,11 @@ def fig_cr_ale_tradeoff(pvt_designs, save, prefix):
                label=f"τ_ALE = {TAU_ALE}", zorder=2)
     ax.axvline(TAU_CR, color=C_GREEN, linewidth=1.0, linestyle="-.",
                label=f"τ_CR = {TAU_CR}", zorder=2)
+    if HAS_BASELINE:
+        ax.axhline(PAPER_ALE, color=C_RED, linewidth=1.0, linestyle=":",
+                   label=f"Baseline ALE = {PAPER_ALE:.4f}", zorder=2)
+        ax.axvline(PAPER_CR, color=C_RED, linewidth=1.0, linestyle=":", zorder=2)
+
     for i, d in enumerate(pvt_designs[:3]):
         ax.annotate(f"  #{i+1}", xy=(d["mean_cr"], d["mean_ale"]),
                     fontsize=8, color="#333333")
@@ -518,6 +636,7 @@ def fig_cr_ale_tradeoff(pvt_designs, save, prefix):
     ax.legend(fontsize=8, loc="lower right")
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig5_cr_ale_tradeoff.png")
         print("  Saved: fig5_cr_ale_tradeoff")
     return fig
@@ -539,7 +658,7 @@ def fig_distribution_shift(all_sims, lhs_pool, save, prefix):
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
     fig.suptitle("Distribution Shift: Initial Sampling vs. RL-Explored Designs\n"
-                 f"({TOPOLOGY} Circuit)", fontsize=12)
+                 f"({TOPOLOGY} Circuit, {PDK_NAME})", fontsize=12)
 
     bins_cr = np.linspace(0, max(max(lhs_crs,default=0), max(rl_crs,default=0))*1.05, 30)
     bins_ale = np.linspace(0, max(max(lhs_ales,default=0), max(rl_ales,default=0))*1.05, 30)
@@ -551,6 +670,9 @@ def fig_distribution_shift(all_sims, lhs_pool, save, prefix):
             label=f"LHS initial (n={len(lhs_crs)})", density=True, edgecolor="white")
     ax.axvline(TAU_CR, color=C_GREEN, linewidth=1.5, linestyle="-.",
                label=f"τ_CR = {TAU_CR}")
+    if HAS_BASELINE:
+        ax.axvline(PAPER_CR, color=C_RED, linewidth=1.2, linestyle=":",
+                   label=f"Baseline = {PAPER_CR:.4f}")
     ax.set_xlabel("Chaotic Ratio (CR)", fontsize=10)
     ax.set_ylabel("Density", fontsize=10)
     ax.set_title("CR Distribution")
@@ -563,6 +685,9 @@ def fig_distribution_shift(all_sims, lhs_pool, save, prefix):
             label=f"LHS initial (n={len(lhs_ales)})", density=True, edgecolor="white")
     ax.axvline(TAU_ALE, color=C_GREEN, linewidth=1.5, linestyle="-.",
                label=f"τ_ALE = {TAU_ALE}")
+    if HAS_BASELINE:
+        ax.axvline(PAPER_ALE, color=C_RED, linewidth=1.2, linestyle=":",
+                   label=f"Baseline = {PAPER_ALE:.4f}")
     ax.set_xlabel("Average Lyapunov Exponent (ALE)", fontsize=10)
     ax.set_ylabel("Density", fontsize=10)
     ax.set_title("ALE Distribution")
@@ -570,6 +695,7 @@ def fig_distribution_shift(all_sims, lhs_pool, save, prefix):
 
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig6_distribution_shift.png")
         print("  Saved: fig6_distribution_shift")
     return fig
@@ -613,7 +739,7 @@ def fig_parameter_distribution(all_sims, by_widths, save, prefix, top_n=50):
     fig, axes = plt.subplots(nrow, ncol, figsize=(2.0*ncol + 1, 3.0*nrow + 0.5))
     axes = np.atleast_1d(axes).ravel()
     fig.suptitle(f"Parameter Distribution Among Top {top_n} Chaotic Designs\n"
-                 f"(Ranked by nominal CR > {PROG_GATE}, {TOPOLOGY})",
+                 f"(Ranked by nominal CR > {PROG_GATE}, {TOPOLOGY}, {PDK_NAME})",
                  fontsize=12, y=0.99)
 
     for idx, pn in enumerate(param_names):
@@ -639,6 +765,7 @@ def fig_parameter_distribution(all_sims, by_widths, save, prefix, top_n=50):
 
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig7_parameter_distribution.png")
         print("  Saved: fig7_parameter_distribution")
     return fig
@@ -708,6 +835,7 @@ def fig_parameter_mode(pvt_designs, save, prefix, top_n=20):
     cb.set_label("Consistency (fraction of designs at the mode)", fontsize=8)
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig_parameter_mode.png", dpi=140)
         print("  Saved: fig_parameter_mode")
     return fig
@@ -793,6 +921,7 @@ def fig_parameter_mode_table(pvt_designs, save, prefix, top_n=20):
                 cell.set_facecolor("#f8f9fa" if r % 2 == 0 else "white")
                 cell.set_text_props(color="#333333", fontsize=9)
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig_parameter_mode_table.png", bbox_inches="tight", dpi=140)
         print("  Saved: fig_parameter_mode_table")
     return fig
@@ -806,12 +935,18 @@ def fig_corner_bars(pvt_designs, save, prefix):
 
     entries = list(show)
     labels = [f"#{i+1}" for i in range(len(show))]
+    if HAS_BASELINE:
+        baseline = {"wk": "baseline", "tt_cr": PAPER_CR, "ss_cr": PAPER_CR,
+                    "ff_cr": PAPER_CR, "tt_ale": PAPER_ALE, "ss_ale": PAPER_ALE,
+                    "ff_ale": PAPER_ALE, "min_cr": PAPER_CR}
+        entries = entries + [baseline]
+        labels = labels + ["Baseline\n(paper)"]
     x = np.arange(len(entries))
     w = 0.25
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 8), sharex=True)
     fig.suptitle("PVT Corner Performance of Top AutoChaos Designs\n"
-                 f"({TOPOLOGY} Circuit)", fontsize=12)
+                 f"({TOPOLOGY} Circuit, {PDK_NAME})", fontsize=12)
 
     b1 = ax1.bar(x-w, [e["tt_cr"] for e in entries], w,
                  label="TT (1.1 V / 27°C)", color=C_BLUE, edgecolor="white", linewidth=0.5)
@@ -821,6 +956,9 @@ def fig_corner_bars(pvt_designs, save, prefix):
                  label="FF (1.155 V / 0°C)", color=C_ORANGE, edgecolor="white", linewidth=0.5)
     ax1.axhline(TAU_CR, color="black", linewidth=1.0, linestyle="-.",
                 label=f"τ_CR = {TAU_CR}")
+    if HAS_BASELINE:
+        ax1.axhline(PAPER_CR, color=C_RED, linewidth=0.8, linestyle=":",
+                    label=f"{BASELINE_LBL} = {PAPER_CR:.4f}")
     ax1.set_ylabel("Chaotic Ratio (CR)", fontsize=10)
     ax1.set_title("Chaotic Ratio per PVT Corner")
     ax1.legend(fontsize=8, loc="upper right")
@@ -840,6 +978,9 @@ def fig_corner_bars(pvt_designs, save, prefix):
                  label="FF", color=C_ORANGE, edgecolor="white", linewidth=0.5)
     ax2.axhline(TAU_ALE, color="black", linewidth=1.0, linestyle="-.",
                 label=f"τ_ALE = {TAU_ALE}")
+    if HAS_BASELINE:
+        ax2.axhline(PAPER_ALE, color=C_RED, linewidth=0.8, linestyle=":",
+                    label=f"Baseline = {PAPER_ALE:.4f}")
     ax2.set_ylabel("Average Lyapunov Exponent (ALE)", fontsize=10)
     ax2.set_title("ALE per PVT Corner")
     ax2.legend(fontsize=8, loc="upper right")
@@ -853,6 +994,7 @@ def fig_corner_bars(pvt_designs, save, prefix):
 
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig8_corner_bars.png")
         print("  Saved: fig8_corner_bars")
     return fig
@@ -881,6 +1023,11 @@ def fig_summary_panel(df, all_sims, by_widths, pvt_designs, save, prefix):
         ("Best Min CR (all PVT)", f"{best_min_cr:.4f}"),
         ("Best Min ALE (all PVT)", f"{best_min_ale:.4f}"),
     ]
+    if HAS_BASELINE:
+        metrics += [
+            ("Paper Baseline CR", f"{PAPER_CR:.4f}"),
+            ("CR Improvement (PVT-robust)", f"+{best_min_cr-PAPER_CR:.4f}"),
+        ]
     metrics += [
         ("Final Mean Reward", f"{final_reward:.4f}"),
     ]
@@ -888,7 +1035,7 @@ def fig_summary_panel(df, all_sims, by_widths, pvt_designs, save, prefix):
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.axis("off")
     fig.suptitle("AutoChaos Training Summary\n"
-                 f"({TOPOLOGY} Chaotic PUF Circuit)",
+                 f"({TOPOLOGY} Chaotic PUF Circuit, {PDK_NAME}, {ENGINE_NAME})",
                  fontsize=12)
 
     col_labels = ["Metric", "Value"]
@@ -921,11 +1068,12 @@ def fig_summary_panel(df, all_sims, by_widths, pvt_designs, save, prefix):
 
     fig.tight_layout(rect=[0,0,1,0.92])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig9_summary_panel.png")
         print("  Saved: fig9_summary_panel")
     return fig
 
-def fig_iteration_curves(df, topology_name, tau_cr, save, prefix):
+def fig_iteration_curves(df, topology_name, pdk, tau_cr, save, prefix):
     n = len(df)
     iters = df["training_iteration"].values if "training_iteration" in df.columns else np.arange(1, n+1)
     r_mean = df["env_runners/episode_return_mean"].values if "env_runners/episode_return_mean" in df.columns else np.full(n, np.nan)
@@ -942,7 +1090,7 @@ def fig_iteration_curves(df, topology_name, tau_cr, save, prefix):
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 9), sharex=True)
     fig.suptitle(f"Training Progress per PPO Iteration\n"
-                 f"({topology_name})", fontsize=12)
+                 f"({topology_name}, {pdk}, {ENGINE_NAME})", fontsize=12)
 
     ax1.fill_between(iters, r_min, r_max, alpha=0.12, color=C_BLUE, label="Min/max range")
     ax1.plot(iters, r_mean, color=C_GREY, linewidth=0.8, alpha=0.7, label="Mean reward")
@@ -960,11 +1108,6 @@ def fig_iteration_curves(df, topology_name, tau_cr, save, prefix):
     ax1.set_title("Reward per Iteration")
     ax1.legend(fontsize=8, loc="upper left",
                bbox_to_anchor=(1.01, 1.0), borderaxespad=0)
-    ax1.annotate(f"Final: {r_mean[-1]:.3f}",
-                 xy=(iters[-1], r_mean[-1]),
-                 xytext=(iters[max(0,len(iters)-20)], r_mean[-1] - 0.08),
-                 fontsize=8, color=C_BLUE,
-                 arrowprops=dict(arrowstyle="->", color=C_BLUE, lw=0.8))
 
     if has_chaos:
         ax2.plot(iters, cr_nom, color=C_BLUE, linewidth=1.0, alpha=0.5,
@@ -982,6 +1125,9 @@ def fig_iteration_curves(df, topology_name, tau_cr, save, prefix):
                      linestyle=":", alpha=0.8, label="CR worst (per-iter max, w=20)")
         ax2.axhline(tau_cr, color=C_GREEN, linewidth=1.2, linestyle="-.",
                     label=f"Target τ_CR = {tau_cr}")
+        if HAS_BASELINE:
+            ax2.axhline(PAPER_CR, color=C_RED, linewidth=1.0, linestyle=":",
+                        label=f"{BASELINE_LBL} CR = {PAPER_CR:.4f}")
     else:
         ax2.text(0.5, 0.5, "AutoChaosCallbacks metrics not available in this run",
                  ha="center", va="center", transform=ax2.transAxes, color=C_GREY)
@@ -993,11 +1139,12 @@ def fig_iteration_curves(df, topology_name, tau_cr, save, prefix):
 
     fig.tight_layout(rect=[0, 0, 0.82, 1])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig10_iteration_curves.png")
         print("  Saved: fig10_iteration_curves")
     return fig
 
-def fig_ppo_health(df, topology_name, save, prefix):
+def fig_ppo_health(df, topology_name, pdk, save, prefix):
     n = len(df)
     iters = df["training_iteration"].values if "training_iteration" in df.columns else np.arange(1, n+1)
     vf_var = df["learners/default_policy/vf_explained_var"].values if "learners/default_policy/vf_explained_var" in df.columns else None
@@ -1009,7 +1156,7 @@ def fig_ppo_health(df, topology_name, save, prefix):
 
     fig, axes = plt.subplots(2, 3, figsize=(13, 7))
     fig.suptitle(f"PPO Training Health Diagnostics\n"
-                 f"({topology_name})", fontsize=12)
+                 f"({topology_name}, {pdk}, {ENGINE_NAME})", fontsize=12)
 
     def sax(ax, title, xlabel="Iteration", ylabel=""):
         ax.set_title(title, fontsize=10)
@@ -1061,11 +1208,12 @@ def fig_ppo_health(df, topology_name, save, prefix):
 
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig11_ppo_health.png")
         print("  Saved: fig11_ppo_health")
     return fig
 
-def fig_top20_summary_table(pvt_designs, topology_name, tau_cr, tau_ale, save, prefix, top_n=20):
+def fig_top20_summary_table(pvt_designs, topology_name, pdk, tau_cr, tau_ale, save, prefix, top_n=20):
     designs = pvt_designs[:top_n]
     if not designs:
         print("  SKIP fig12: no 3-corner designs"); return None
@@ -1073,7 +1221,7 @@ def fig_top20_summary_table(pvt_designs, topology_name, tau_cr, tau_ale, save, p
     fig_h = max(6, len(designs) * 0.42 + 2.0)
     fig, ax = plt.subplots(figsize=(12, fig_h))
     fig.suptitle(f"Top {len(designs)} PVT-Robust Designs - Summary\n"
-                 f"({topology_name}, ranked by PVT reward value)",
+                 f"({topology_name}, {pdk}, ranked by PVT reward value)",
                  fontsize=12, y=0.98)
     ax.axis("off")
     ax.set_position([0.01, 0.05, 0.98, 0.88])
@@ -1136,11 +1284,12 @@ def fig_top20_summary_table(pvt_designs, topology_name, tau_cr, tau_ale, save, p
              r"where $X_{wc}=\alpha\min_c X_c+(1-\alpha)\,\overline{X}_c$",
              color="#333333", fontsize=8)
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig12_top20_summary.png")
         print("  Saved: fig12_top20_summary")
     return fig
 
-def fig_top20_per_corner(pvt_designs, topology_name, tau_cr, tau_ale, save, prefix, top_n=20):
+def fig_top20_per_corner(pvt_designs, topology_name, pdk, tau_cr, tau_ale, save, prefix, top_n=20):
     designs = pvt_designs[:top_n]
     if not designs:
         print("  SKIP fig13: no 3-corner designs"); return None
@@ -1212,7 +1361,7 @@ def fig_top20_per_corner(pvt_designs, topology_name, tau_cr, tau_ale, save, pref
     fig.patch.set_facecolor("white")
     fig.suptitle(
         f"Top {len(designs)} PVT-Robust Designs: Per-Corner CR and ALE\n"
-        f"({topology_name}, ranked by PVT reward value, corners TT / SS / FF)",
+        f"({topology_name}, {pdk}, ranked by PVT reward value, corners TT / SS / FF)",
         fontsize=12, fontweight="bold", y=1.03)
     ax.set_facecolor("white"); ax.axis("off")
 
@@ -1300,11 +1449,12 @@ def fig_top20_per_corner(pvt_designs, topology_name, tau_cr, tau_ale, save, pref
              color="#555555", fontsize=8)
 
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig13_top20_per_corner.png")
         print("  Saved: fig13_top20_per_corner")
     return fig
 
-def fig_reward_per_iteration(df, topology_name, save, prefix):
+def fig_reward_per_iteration(df, topology_name, pdk, save, prefix):
     """Reward per PPO iteration with min/max band, best-so-far, trend, and the
     first iteration at which the smoothed mean stops improving."""
     n = len(df)
@@ -1349,21 +1499,16 @@ def fig_reward_per_iteration(df, topology_name, save, prefix):
     ax.set_xlabel("PPO Training Iteration", fontsize=10)
     ax.set_ylabel("Episode Reward", fontsize=10)
     ax.set_title(f"AutoChaos Reward Trend per Training Iteration\n"
-                 f"({topology_name} Chaotic Circuit)")
-    ax.legend(loc="lower right", fontsize=8)
-    if np.isfinite(r_mean[-1]):
-        ax.annotate(f"Final mean: {r_mean[-1]:.3f}",
-                    xy=(iters[-1], r_mean[-1]),
-                    xytext=(iters[max(0, n-25)], r_mean[-1] - 0.20),
-                    fontsize=8, color=C_BLUE,
-                    arrowprops=dict(arrowstyle="->", color=C_BLUE, lw=0.8))
+                 f"({topology_name} Chaotic Circuit, {pdk}, {ENGINE_NAME})")
+    ax.legend(loc="best")
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig14_reward_per_iteration.png")
         print("  Saved: fig14_reward_per_iteration")
     return fig
 
-def fig_loss_decomposition(df, topology_name, save, prefix):
+def fig_loss_decomposition(df, topology_name, pdk, save, prefix):
     """PPO loss components with the adaptive KL and scheduled entropy coefficients."""
     n = len(df)
     if n == 0:
@@ -1379,7 +1524,7 @@ def fig_loss_decomposition(df, topology_name, save, prefix):
     iw = max(3, n // 12)
 
     fig, axes = plt.subplots(2, 2, figsize=(12, 7.5))
-    fig.suptitle(f"PPO Objective Decomposition\n({topology_name})",
+    fig.suptitle(f"PPO Objective Decomposition\n({topology_name}, {pdk}, {ENGINE_NAME})",
                  fontsize=12)
 
     ax = axes[0, 0]
@@ -1423,11 +1568,12 @@ def fig_loss_decomposition(df, topology_name, save, prefix):
 
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig15_loss_decomposition.png")
         print("  Saved: fig15_loss_decomposition")
     return fig
 
-def fig_ppo_loss(df, topology_name, save, prefix):
+def fig_ppo_loss(df, topology_name, pdk, save, prefix):
     """Total PPO loss, identical to the fig11 panel, as a standalone figure."""
     n = len(df)
     if n == 0:
@@ -1439,16 +1585,17 @@ def fig_ppo_loss(df, topology_name, save, prefix):
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(iters, loss, color=C_RED, linewidth=1.5)
-    ax.set_title(f"Total PPO Loss\n({topology_name})", fontsize=12)
+    ax.set_title(f"Total PPO Loss\n({topology_name}, {pdk}, {ENGINE_NAME})", fontsize=12)
     ax.set_xlabel("Iteration", fontsize=10)
     ax.set_ylabel("Loss", fontsize=10)
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig20_ppo_loss.png")
         print("  Saved: fig20_ppo_loss")
     return fig
 
-def fig_mean_kl(df, topology_name, save, prefix):
+def fig_mean_kl(df, topology_name, pdk, save, prefix):
     """Mean KL loss, identical to the fig11 panel, as a standalone figure."""
     n = len(df)
     if n == 0:
@@ -1460,16 +1607,17 @@ def fig_mean_kl(df, topology_name, save, prefix):
 
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(iters, kl, color=C_TEAL, linewidth=1.5)
-    ax.set_title(f"Mean KL Loss\n({topology_name})", fontsize=12)
+    ax.set_title(f"Mean KL Loss\n({topology_name}, {pdk}, {ENGINE_NAME})", fontsize=12)
     ax.set_xlabel("Iteration", fontsize=10)
     ax.set_ylabel("KL", fontsize=10)
     fig.tight_layout()
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig21_mean_kl.png")
         print("  Saved: fig21_mean_kl")
     return fig
 
-def fig_success_and_eplen(df, topology_name, save, prefix):
+def fig_success_and_eplen(df, topology_name, pdk, save, prefix):
     """All-corner pass rate over training, paired with mean episode length."""
     n = len(df)
     if n == 0:
@@ -1483,7 +1631,7 @@ def fig_success_and_eplen(df, topology_name, save, prefix):
 
     fig, ax = plt.subplots(figsize=(8, 4.8))
     fig.suptitle(f"Task Success and Episode Length over Training\n"
-                 f"({topology_name})", fontsize=12)
+                 f"({topology_name}, {pdk}, {ENGINE_NAME})", fontsize=12)
     if ap is not None:
         ax.plot(iters, ap, color=C_GREY, linewidth=0.8, alpha=0.5)
         ax.plot(iters, smooth(ap, iw), color=C_GREEN, linewidth=2.4,
@@ -1505,11 +1653,12 @@ def fig_success_and_eplen(df, topology_name, save, prefix):
     ax.legend(lines, labels, loc="center right", fontsize=9)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig16_success_eplen.png")
         print("  Saved: fig16_success_eplen")
     return fig
 
-def fig_sample_efficiency(df, all_sims, save, prefix, topology_name):
+def fig_sample_efficiency(df, all_sims, save, prefix, topology_name, pdk):
     """Best worst-corner CR as a function of cumulative environment steps."""
     n = len(df)
     if n == 0:
@@ -1523,25 +1672,30 @@ def fig_sample_efficiency(df, all_sims, save, prefix, topology_name):
 
     fig, ax = plt.subplots(figsize=(8, 4.8))
     fig.suptitle(f"Sample Efficiency: Best Robust CR vs Environment Steps\n"
-                 f"({topology_name})", fontsize=12)
+                 f"({topology_name}, {pdk}, {ENGINE_NAME})", fontsize=12)
     ax.plot(steps, best_crw, color=C_BLUE, linewidth=2.2,
             label="Best worst-corner CR so far")
     ax.axhline(TAU_CR, color=C_GREEN, linewidth=1.2, linestyle="-.",
                label=f"Target tau_CR = {TAU_CR}")
+    if HAS_BASELINE:
+        ax.axhline(PAPER_CR, color=C_RED, linewidth=1.0, linestyle=":",
+                   label=f"{BASELINE_LBL} CR = {PAPER_CR:.4f}")
+
     cross = np.argmax(best_crw >= TAU_CR) if np.any(best_crw >= TAU_CR) else None
     if cross:
         ax.axvline(steps[cross], color=C_ORANGE, linewidth=1.2, linestyle="--",
                    label=f"tau_CR reached @ {int(steps[cross]):,} steps")
     ax.set_xlabel("Environment Steps (cumulative)", fontsize=10)
     ax.set_ylabel("Worst-corner CR", fontsize=10)
-    ax.legend(loc="lower right", fontsize=9)
+    ax.legend(loc="best")
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig17_sample_efficiency.png")
         print("  Saved: fig17_sample_efficiency")
     return fig
 
-def fig_gradient_stability(df, topology_name, save, prefix):
+def fig_gradient_stability(df, topology_name, pdk, save, prefix):
     """Gradient global norm against the clip threshold, with explained variance."""
     n = len(df)
     if n == 0:
@@ -1556,7 +1710,7 @@ def fig_gradient_stability(df, topology_name, save, prefix):
     iw = max(3, n // 12)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5))
-    fig.suptitle(f"Optimization Stability\n({topology_name})",
+    fig.suptitle(f"Optimization Stability\n({topology_name}, {pdk}, {ENGINE_NAME})",
                  fontsize=12)
     ax1.plot(iters, gn, color=C_GREY, linewidth=0.8, alpha=0.6)
     ax1.plot(iters, smooth(gn, iw), color=C_BROWN, linewidth=2.0, label="Grad global norm")
@@ -1576,12 +1730,13 @@ def fig_gradient_stability(df, topology_name, save, prefix):
         ax2.legend(fontsize=8)
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig18_gradient_stability.png")
         print("  Saved: fig18_gradient_stability")
     return fig
 
 def fig_run_summary_table(df, all_sims, by_widths, pvt_designs, lhs_pool,
-                          topology_name, save, prefix):
+                          topology_name, pdk, save, prefix):
     """One-figure run record: hyperparameters, environment settings, headline results."""
     n = len(df)
     def last(name, default=np.nan):
@@ -1598,6 +1753,8 @@ def fig_run_summary_table(df, all_sims, by_widths, pvt_designs, lhs_pool,
     rows = [
         ("EXPERIMENT", ""),
         ("Topology", topology_name),
+        ("PDK / model family", pdk),
+        ("Simulator", ENGINE_NAME),
         ("PPO HYPERPARAMETERS", ""),
         ("Train batch / minibatch / epochs", "100 / 40 / 10"),
         ("Learning rate", "3e-4"),
@@ -1630,7 +1787,7 @@ def fig_run_summary_table(df, all_sims, by_widths, pvt_designs, lhs_pool,
 
     fig, ax = plt.subplots(figsize=(8.5, 11))
     ax.axis("off")
-    fig.suptitle(f"Run Configuration & Summary\n({topology_name})",
+    fig.suptitle(f"Run Configuration & Summary\n({topology_name}, {pdk}, {ENGINE_NAME})",
                  fontsize=13, y=0.98)
     y = 0.96; dy = 0.96 / (len(rows) + 1)
     for k, v in rows:
@@ -1645,6 +1802,7 @@ def fig_run_summary_table(df, all_sims, by_widths, pvt_designs, lhs_pool,
                     transform=ax.transAxes, va="top", fontweight="medium")
         y -= dy
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_table2_run_summary.png")
         print("  Saved: table2_run_summary")
     return fig
@@ -1688,7 +1846,7 @@ def compute_design_area(params, netlist_text):
             tunable += area
     return tunable, total
 
-def fig_design_sizing(pvt_designs, topology_name, save, prefix, top_n=10, netlist_text=None):
+def fig_design_sizing(pvt_designs, topology_name, pdk, save, prefix, top_n=10, netlist_text=None):
     """Full W/L sizing for the top-N designs, one column per design."""
     designs = pvt_designs[:top_n]
     if not designs:
@@ -1748,7 +1906,7 @@ def fig_design_sizing(pvt_designs, topology_name, save, prefix, top_n=10, netlis
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     ax.axis("off")
     fig.suptitle(f"Top {len(designs)} Design Sizings (full W/L)\n"
-                 f"({topology_name}) - companion to ranking tables",
+                 f"({topology_name}, {pdk}) - companion to ranking tables",
                  fontsize=12, fontweight="bold", y=0.99)
 
     cw = [0.16] + [(0.84/len(designs))] * len(designs)
@@ -1775,6 +1933,7 @@ def fig_design_sizing(pvt_designs, topology_name, save, prefix, top_n=10, netlis
             cell.set_text_props(color="#333333", fontsize=8.5,
                                 fontweight="bold" if is_summ else "normal")
     if save:
+        finalize_style(fig)
         fig.savefig(f"{prefix}_fig19_design_sizing.png", bbox_inches="tight")
         print("  Saved: fig19_design_sizing")
     return fig
@@ -1797,6 +1956,9 @@ def main():
                         help="Top N designs for parameter distribution plot")
     parser.add_argument("--top20", type=int, default=20,
                         help="Top N designs for summary and per-corner tables")
+    parser.add_argument("--pdk", type=str, default=None,
+                        help="Device model shown in figure titles, overrides detection "
+                             "(e.g. 'GPDK 45 nm', 'BPTM 45 nm', 'PTM 22 nm LP', 'PTM 65 nm')")
     parser.add_argument("--netlist", type=str, default=None,
                         help="Path to the netlist file for area-row computation in fig19")
     parser.add_argument("--topology", type=str, default=None,
@@ -1812,10 +1974,10 @@ def main():
             args.cache = "metrics_cache.db"
 
     print(f"[AutoChaos Analyzer]")
-    print(f"  Run dir: {args.run_dir}")
-    print(f"  Cache: {args.cache} ({'SQLite' if args.cache.endswith('.db') else 'JSON'})")
-    print(f"  LHS pool: {args.lhs}")
-    print(f"  Save: {args.save}")
+    print(f"  Run dir  : {args.run_dir}")
+    print(f"  Cache    : {args.cache} ({'SQLite' if args.cache.endswith('.db') else 'JSON'})")
+    print(f"  LHS pool : {args.lhs}")
+    print(f"  Save     : {args.save}")
 
     df = load_progress(args.run_dir)
     results = load_results(args.run_dir)
@@ -1882,31 +2044,70 @@ def main():
     env_cfg = results[0].get("config", {}).get("env_config", {}) if results else {}
     mp = str(env_cfg.get("map_config_path", "")).lower()
 
+    engine_name, pdk = resolve_model(env_cfg, args.run_dir, args.pdk)
     if "mscmi" in mp and args.topology is None:
         topology_name = "MSCMI"
 
-    global TOPOLOGY
+    global PDK_NAME, TOPOLOGY, ENGINE_NAME, BASELINE_LBL, PAPER_CR, PAPER_ALE, HAS_BASELINE
+    PDK_NAME = pdk
     TOPOLOGY = topology_name
+    ENGINE_NAME = engine_name
+    base = BASELINES.get(pdk)
+    if base is None:
+        HAS_BASELINE = False
+        print(f"  [baseline] no baseline defined for {pdk}; reference lines omitted")
+    else:
+        PAPER_CR = base["CR"]
+        PAPER_ALE = base["ALE"]
+        BASELINE_LBL = base["label"]
+
+    try:
+        import yaml as _yaml, os as _os
+        _mp = env_cfg.get("map_config_path", "")
+        _cands = [_mp, _os.path.join(args.run_dir, _mp),
+                  _os.path.join(args.run_dir, _os.path.basename(_mp)) if _mp else "",
+                  _os.path.join(args.run_dir, "map_config_mscmi.yaml")]
+        _mc = None
+        for _c in _cands:
+            if _c and _os.path.isfile(_c):
+                _mc = _yaml.safe_load(open(_c)); break
+        if _mc and not HAS_BASELINE and isinstance(_mc.get("nominal_metrics"), dict):
+            print("  [baseline] map_config nominal_metrics ignored: no baseline for this model")
+        if _mc and HAS_BASELINE and isinstance(_mc.get("nominal_metrics"), dict):
+            _nm = _mc["nominal_metrics"]; _pc = _nm.get("per_corner")
+            if isinstance(_pc, dict) and _pc:
+                _crv=[c.get("CR") for c in _pc.values() if isinstance(c,dict) and c.get("CR") is not None]
+                _alv=[c.get("ALE") for c in _pc.values() if isinstance(c,dict) and c.get("ALE") is not None]
+                if _crv: PAPER_CR=min(_crv)
+                if _alv: PAPER_ALE=_nm.get("worst_corner_ALE", min(_alv))
+                BASELINE_LBL="Hand-sized worst-corner"
+                print(f"  [baseline] from map_config: worst-corner CR={PAPER_CR:.4f}, ALE={PAPER_ALE:.4f}")
+            elif _nm.get("CR") is not None:
+                PAPER_CR=_nm.get("CR",PAPER_CR); PAPER_ALE=_nm.get("worst_corner_ALE",_nm.get("ALE",PAPER_ALE))
+                BASELINE_LBL="Hand-sized baseline"
+                print(f"  [baseline] from map_config: CR={PAPER_CR:.4f}, ALE={PAPER_ALE:.4f}")
+    except Exception as _e:
+        print(f"  [baseline] map_config not read ({_e}); using {BASELINE_LBL}")
 
     n_iters = len(df)
     wall_h = df["time_total_s"].iloc[-1]/3600 if n_iters else 0
     n_tt = sum(1 for s in all_sims if s["process"] == "tt")
 
-    print(f"\n  Topology: {topology_name}")
-    print(f"  Iterations: {n_iters} ({wall_h:.1f}h)")
-    print(f"  TT simulations: {n_tt:,}")
+    print(f"\n  Topology       : {topology_name}  ({pdk}, {engine_name})")
+    print(f"  Iterations     : {n_iters}  ({wall_h:.1f}h)")
+    print(f"  TT simulations : {n_tt:,}")
     print(f"  3-corner designs: {len(pvt_designs)}")
     if pvt_designs:
-        print(f"  Best min CR: {pvt_designs[0]['min_cr']:.4f}")
-        print(f"  Best min ALE: {pvt_designs[0]['min_ale']:.4f}")
-    print(f"  LHS entries: {len(lhs_pool)}")
+        print(f"  Best Min CR    : {pvt_designs[0]['min_cr']:.4f}")
+        print(f"  Best Min ALE   : {pvt_designs[0]['min_ale']:.4f}")
+    print(f"  LHS entries    : {len(lhs_pool)}")
     print(f"\n  Generating figures...")
 
     figs = []
     figs.append(("Reward Curve",
-                 fig_reward_curve(df, args.save, args.prefix, topology_name)))
+                 fig_reward_curve(df, args.save, args.prefix, pdk, topology_name)))
     figs.append(("Search Saturation",
-                 fig_search_saturation(all_sims, args.save, args.prefix, topology_name)))
+                 fig_search_saturation(all_sims, args.save, args.prefix, pdk, topology_name)))
     figs.append(("PVT Funnel",
                  fig_pvt_funnel(all_sims, by_widths, args.save, args.prefix)))
     figs.append(("Nominal vs Worst",
@@ -1926,36 +2127,36 @@ def main():
     figs.append(("Summary Panel",
                  fig_summary_panel(df, all_sims, by_widths, pvt_designs, args.save, args.prefix)))
     figs.append(("Iteration Curves",
-                 fig_iteration_curves(df, topology_name, TAU_CR, args.save, args.prefix)))
+                 fig_iteration_curves(df, topology_name, pdk, TAU_CR, args.save, args.prefix)))
     figs.append(("PPO Health",
-                 fig_ppo_health(df, topology_name, args.save, args.prefix)))
+                 fig_ppo_health(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("Top 20 Summary Table",
-                 fig_top20_summary_table(pvt_designs, topology_name,
+                 fig_top20_summary_table(pvt_designs, topology_name, pdk,
                                          TAU_CR, TAU_ALE, args.save, args.prefix,
                                          top_n=args.top20)))
     figs.append(("Top 20 Per-Corner Table",
-                 fig_top20_per_corner(pvt_designs, topology_name,
+                 fig_top20_per_corner(pvt_designs, topology_name, pdk,
                                       TAU_CR, TAU_ALE, args.save, args.prefix,
                                       top_n=args.top20)))
     figs.append(("Reward per Iteration",
-                 fig_reward_per_iteration(df, topology_name, args.save, args.prefix)))
+                 fig_reward_per_iteration(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("Loss Decomposition",
-                 fig_loss_decomposition(df, topology_name, args.save, args.prefix)))
+                 fig_loss_decomposition(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("PPO Policy Loss (standalone)",
-                 fig_ppo_loss(df, topology_name, args.save, args.prefix)))
+                 fig_ppo_loss(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("Mean KL (standalone)",
-                 fig_mean_kl(df, topology_name, args.save, args.prefix)))
+                 fig_mean_kl(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("Success Rate & Episode Length",
-                 fig_success_and_eplen(df, topology_name, args.save, args.prefix)))
+                 fig_success_and_eplen(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("Sample Efficiency",
-                 fig_sample_efficiency(df, all_sims, args.save, args.prefix, topology_name)))
+                 fig_sample_efficiency(df, all_sims, args.save, args.prefix, topology_name, pdk)))
     figs.append(("Gradient Stability",
-                 fig_gradient_stability(df, topology_name, args.save, args.prefix)))
+                 fig_gradient_stability(df, topology_name, pdk, args.save, args.prefix)))
     figs.append(("Run Summary Table",
                  fig_run_summary_table(df, all_sims, by_widths, pvt_designs, lhs_pool,
-                                       topology_name, args.save, args.prefix)))
+                                       topology_name, pdk, args.save, args.prefix)))
     figs.append(("Design Sizing Appendix",
-                 fig_design_sizing(pvt_designs, topology_name, args.save, args.prefix,
+                 fig_design_sizing(pvt_designs, topology_name, pdk, args.save, args.prefix,
                                    top_n=min(10, args.top20 if hasattr(args,'top20') else 10),
                                    netlist_text=_netlist_text)))
 
